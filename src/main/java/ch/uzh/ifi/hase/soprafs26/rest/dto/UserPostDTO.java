@@ -1,11 +1,17 @@
 package ch.uzh.ifi.hase.soprafs26.rest.dto;
+import jakarta.validation.constraints.NotBlank;
+
+
 
 public class UserPostDTO {
 
+	@NotBlank
 	private String bio;
 
+	@NotBlank
 	private String username;
 
+	@NotBlank
 	private String password;
 
 	public String getBio() {

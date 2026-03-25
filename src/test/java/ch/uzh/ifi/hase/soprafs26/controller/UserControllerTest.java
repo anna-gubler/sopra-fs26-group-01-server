@@ -51,6 +51,7 @@ public class UserControllerTest {
 	private static final String USERNAME = "firstname@lastname";
 	private static final String BIO = "Hey there! I'm using Whatsapp.";
 	private static final String TOKEN = "6dd696b4-83a2-42a6-8769-e2d755c6b8b8";
+	private static final String PASSWORD = "Very_Safe_Password123!";
 
 	// create new User instance
 	private static User newUser() {
@@ -82,9 +83,10 @@ public class UserControllerTest {
 	}
 
 	@Test
-	public void givenValidUserPostDTO_whenPostUsers_thenReturnCreatedUserAndToken() throws Exception {
+	public void givenValidUserPostDTO_whenAuthRegister_thenReturnCreatedUserAndToken() throws Exception {
 		// given
 		UserPostDTO userPostDTO = newUserPostDTO();
+		userPostDTO.setPassword(PASSWORD);
 		User user = newUser();
 		user.setId(1L);
 		user.setToken(TOKEN);
@@ -94,7 +96,7 @@ public class UserControllerTest {
 		given(userService.createUser(any())).willReturn(user);
 
 		// define HTTP request
-		MockHttpServletRequestBuilder postRequest = post("/users")
+		MockHttpServletRequestBuilder postRequest = post("/auth/register")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(asJsonString(userPostDTO));
 
@@ -134,16 +136,12 @@ public class UserControllerTest {
 	}
 
 	@Test
-	public void givenInvalidUserPostDTO_whenPostUsers_thenReturnBadRequest() throws Exception {
+	public void givenInvalidUserPostDTO_whenAuthRegister_thenReturnBadRequest() throws Exception {
 		// given: invalid DTO (Username fehlt)
 		UserPostDTO invalidDto = newUserPostDTO();
 		invalidDto.setUsername(null);
 
-		// mock: service entscheidet bad request
-		given(userService.createUser(any()))
-				.willThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid user data"));
-
-		MockHttpServletRequestBuilder postRequest = post("/users")
+		MockHttpServletRequestBuilder postRequest = post("/auth/register")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(asJsonString(invalidDto));
 

@@ -9,6 +9,7 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import jakarta.validation.Valid;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,17 @@ public class UserController {
 		this.userService = userService;
 	}
 
+	@PostMapping("/auth/register")
+	@ResponseStatus(HttpStatus.CREATED)
+	@ResponseBody
+	public UserGetDTO createUser(@Valid @RequestBody UserPostDTO userPostDTO) { //@Valid checks if required fields of the userPostDTO are blank and throws an error 400 if they are
+		User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
+		User createdUser = userService.createUser(userInput);
+		UserGetDTO entitiyDto = DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
+		entitiyDto.setToken(createdUser.getToken()); // include token
+		return entitiyDto;
+	}
+
 	@GetMapping("/users")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -46,16 +58,7 @@ public class UserController {
 		return userGetDTOs;
 	}
 
-	@PostMapping("/users")
-	@ResponseStatus(HttpStatus.CREATED)
-	@ResponseBody
-	public UserGetDTO createUser(@RequestBody UserPostDTO userPostDTO) {
-		User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
-		User createdUser = userService.createUser(userInput);
-		UserGetDTO entitiyDto = DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
-		entitiyDto.setToken(createdUser.getToken()); // include token
-		return entitiyDto;
-	}
+	
 
 	@GetMapping("/users/{id}")
 	@ResponseStatus(HttpStatus.OK)
