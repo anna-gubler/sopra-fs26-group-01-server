@@ -12,6 +12,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,9 +39,66 @@ public class UserService {
 		return this.userRepository.findAll();
 	}
 
+	public User getUserById(Long id) {
+		return userRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+	}
+
+	public User changeUserInformation(User user, User userInput) {
+		User userDBEntry = userRepository.findById(userInput.getId())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+		// authenticate user
+		if (!user.getId().equals(userDBEntry.getId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User can only change his own Information");
+		}
+
+		if (userInput.getUsername() != null) {
+			checkIfUserExists(userInput);
+			userDBEntry.setUsername(userInput.getUsername());
+		}
+
+		if (userInput.getName() != null) {
+			userDBEntry.setName(userInput.getName());
+		}
+
+		if (userInput.getBio() != null) {
+			userDBEntry.setBio(userInput.getBio());
+		}
+
+		if (userInput.getPassword() != null) {
+			userDBEntry.setPassword(userInput.getPassword());
+		}
+
+		return userDBEntry;
+	}
+
+	public User loginUser(User userLoginData) {
+		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
+
+		if (userDBEntry == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+		}
+
+		if (!userLoginData.getPassword().equals(userDBEntry.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password");
+		}
+
+		userDBEntry.setStatus(UserStatus.ONLINE);
+		userDBEntry.setToken(UUID.randomUUID().toString());
+
+		return userDBEntry;
+	}
+
+	public void logoutUser(User user) {
+		user.setToken(null);
+		user.setStatus(UserStatus.OFFLINE);
+	}
+
 	public User createUser(User newUser) {
 		newUser.setToken(UUID.randomUUID().toString());
-		newUser.setStatus(UserStatus.OFFLINE);
+		newUser.setStatus(UserStatus.ONLINE);
+		newUser.setCreationDate(LocalDateTime.now());
 		checkIfUserExists(newUser);
 		// saves the given entity but data is only persisted in the database once
 		// flush() is called
@@ -63,16 +121,36 @@ public class UserService {
 	 */
 	private void checkIfUserExists(User userToBeCreated) {
 		User userByUsername = userRepository.findByUsername(userToBeCreated.getUsername());
-		User userByName = userRepository.findByName(userToBeCreated.getName());
 
-		String baseErrorMessage = "The %s provided %s not unique. Therefore, the user could not be created!";
-		if (userByUsername != null && userByName != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					String.format(baseErrorMessage, "username and the name", "are"));
-		} else if (userByUsername != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.format(baseErrorMessage, "username", "is"));
-		} else if (userByName != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.format(baseErrorMessage, "name", "is"));
+		if (userByUsername != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					String.format("The username provided is not unique. Therefore, the user could not be created!"));
 		}
+	}
+
+	public User checkToken(String authorizationHeader) {
+		if (authorizationHeader == null || authorizationHeader.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
+		}
+
+		// erwartet: "Bearer <token>"
+		final String prefix = "Bearer ";
+		if (!authorizationHeader.startsWith(prefix)) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization header");
+		}
+
+		String token = authorizationHeader.substring(prefix.length()).trim();
+		if (token.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+		}
+
+		User user = userRepository.findByToken(token)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+
+		if (user.getStatus() != UserStatus.ONLINE) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not online");
+		}
+
+		return user;
 	}
 }
