@@ -15,10 +15,8 @@ import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.Optional;
 
 import java.time.LocalDateTime;
-
 
 /**
  * User Service
@@ -39,51 +37,35 @@ public class UserService {
 		this.userRepository = userRepository;
 	}
 
-	public List<User> getUsers() {
-		return this.userRepository.findAll();
-	}
+
+
+
+	// Basic Auth Functions first; register, login, logout, check token
 
 	public User createUser(User newUser) {
+		checkIfUserExists(newUser);
+
 		newUser.setToken(UUID.randomUUID().toString());
 		newUser.setStatus(UserStatus.ONLINE);
 		newUser.setCreationDate(LocalDateTime.now());
-
-		checkIfUserExists(newUser);
-
-		//Hash the password before saving
-		String hashedPassword = passwordEncoder.encode(newUser.getPassword());
+		String hashedPassword = passwordEncoder.encode(newUser.getPassword()); // Hash the password before saving
 		newUser.setPassword(hashedPassword);
 
-		// saves the given entity but data is only persisted in the database once
-		// flush() is called
-		newUser = userRepository.save(newUser);
+		newUser = userRepository.save(newUser); // saves the given entity but data is only persisted in the database
+												// once flush() is called
 		userRepository.flush();
-
 		log.debug("Created Information for User: {}", newUser);
 		return newUser;
 	}
 
-	/**
-	 * This is a helper method that will check the uniqueness criteria of the
-	 * username and the name
-	 * defined in the User entity. The method will do nothing if the input is unique
-	 * and throw an error otherwise.
-	 *
-	 * @param userToBeCreated
-	 * @throws org.springframework.web.server.ResponseStatusException
-	 * @see User
-	 */
 	private void checkIfUserExists(User userToBeCreated) {
 		User userByUsername = userRepository.findByUsername(userToBeCreated.getUsername());
-
 		if (userByUsername != null) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "The username provided is not unique. Therefore, the user could not be created!");
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"The username provided is not unique. Therefore, the user could not be created!");
 		}
 	}
 
-	/**
-	 * This is a method logs the user into the platform.
-	 */
 	public User loginUser(User userLoginData) {
 		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
 
@@ -100,30 +82,10 @@ public class UserService {
 
 		return userDBEntry;
 	}
-	
-	/**
-	 * This is a method logs the user out of the platform.
-	 */
+
 	public void logoutUser(User user) {
 		user.setToken(null);
 		user.setStatus(UserStatus.OFFLINE);
-	}
-
-	/**
-	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
-	 */
-	public User getUserById(Long userId) {
-		Optional<User> requestedUser = userRepository.findById(userId);
-
-		if (!requestedUser.isPresent()) {
-			log.debug("User with ID could not be found by ID and 404 called: {}", userId, requestedUser);
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with the ID %s could not be found.", userId));
-		} else {
-			log.debug("User found by ID and returned: {}", requestedUser);	
-			User confirmedUser = requestedUser.get();
-			return confirmedUser;
-		}
 	}
 
 	public User checkToken(String authorizationHeader) {
@@ -131,8 +93,7 @@ public class UserService {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
 		}
 
-		// erwartet: "Bearer <token>"
-		final String prefix = "Bearer ";
+		final String prefix = "Bearer "; // erwartet: "Bearer <token>"
 		if (!authorizationHeader.startsWith(prefix)) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization header");
 		}
@@ -151,6 +112,21 @@ public class UserService {
 
 		return user;
 	}
+
+
+
+	// Next: user related services that are offered
+
+	public List<User> getUsers() {
+		return this.userRepository.findAll();
+	}
+
+
+	public User getUserById(Long id) {
+		return userRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+	}
+
 
 	public User changeUserInformation(User user, User userInput) {
 		User userDBEntry = userRepository.findById(userInput.getId())
