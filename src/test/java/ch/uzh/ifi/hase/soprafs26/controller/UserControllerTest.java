@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
@@ -29,6 +30,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,6 +70,14 @@ public class UserControllerTest {
 		userPostDTO.setUsername(USERNAME);
 		userPostDTO.setBio(BIO);
 		return userPostDTO;
+	}
+
+	// create new UserPatchDTO instance
+	private static UserPatchDTO newUserPatchDTO() {
+		UserPatchDTO userPatchDTO = new UserPatchDTO();
+		userPatchDTO.setUsername(USERNAME);
+		userPatchDTO.setBio(BIO);
+		return userPatchDTO;
 	}
 
 	// mock User authentication
@@ -175,15 +185,15 @@ public class UserControllerTest {
 	}
 
 	@Test
-	public void givenNoAuthorization_whenPutUsers_thenReturnUnauthorized() throws Exception {
+	public void givenNoAuthorization_whenPatchUsersMe_thenReturnUnauthorized() throws Exception {
 		// Mock
 		mockUserAuthentication(newUser(), false);
 
-		MockHttpServletRequestBuilder putRequest = put("/users/1")
+		MockHttpServletRequestBuilder patchRequest = patch("/users/me")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(asJsonString(new UserPutDTO()));
+				.content(asJsonString(new UserPatchDTO()));
 
-		mockMvc.perform(putRequest)
+		mockMvc.perform(patchRequest)
 				.andExpect(status().isUnauthorized());
 	}
 
@@ -244,14 +254,14 @@ public class UserControllerTest {
 	}
 
 	@Test
-	public void givenOwnId_whenPutUserById_thenReturnUser() throws Exception {
-		// given: authenticated user (same person)
+	public void givenValidAuthentication_whenPatchUsersMe_thenReturnUpdatedUser() throws Exception {
+		// given: authenticated user
 		User authUser = newUser();
 		authUser.setId(1L);
 		authUser.setToken(TOKEN);
 
 		// request dto (what the client wants to change)
-		UserPutDTO dto = new UserPutDTO();
+		UserPatchDTO dto = new UserPatchDTO();
 		dto.setBio("Updated bio");
 
 		// service returns updated user
@@ -265,46 +275,15 @@ public class UserControllerTest {
 		given(userService.changeUserInformation(any(User.class), any(User.class))).willReturn(updatedUser);
 
 		// request
-		MockHttpServletRequestBuilder putRequest = put("/users/1")
+		MockHttpServletRequestBuilder patchRequest = patch("/users/me")
 				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(asJsonString(dto));
 
 		// then
-		mockMvc.perform(putRequest)
-				.andExpect(status().isNoContent());
-	}
-
-	@Test
-	public void givenIdOfOtherUser_whenPutUserById_thenReturnForbidden() throws Exception {
-
-		// authenticated user (id=1)
-		User authUser = newUser();
-		authUser.setId(1L);
-		authUser.setToken(TOKEN);
-
-		// update request (irrelevant was genau drin ist, Hauptsache Body ist gültig)
-		UserPutDTO dto = new UserPutDTO();
-		dto.setBio("Not allowed");
-
-		// mocks
-		given(userService.checkToken(any()))
-				.willReturn(authUser);
-
-		given(userService.changeUserInformation(any(User.class), any(User.class)))
-				.willThrow(new ResponseStatusException(
-						HttpStatus.FORBIDDEN,
-						"User can only change his own Information"));
-
-		// request: trying to update someone else (id=2)
-		MockHttpServletRequestBuilder putRequest = put("/users/2")
-				.header("Authorization", "Bearer " + TOKEN)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(asJsonString(dto));
-
-		// then
-		mockMvc.perform(putRequest)
-				.andExpect(status().isForbidden());
+		mockMvc.perform(patchRequest)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.bio", is(updatedUser.getBio())));
 	}
 
 	/*

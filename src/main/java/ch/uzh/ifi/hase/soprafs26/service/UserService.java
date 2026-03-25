@@ -128,29 +128,22 @@ public class UserService {
 	}
 
 
-	public User changeUserInformation(User user, User userInput) {
-		User userDBEntry = userRepository.findById(userInput.getId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-		// authenticate user
-		if (!user.getId().equals(userDBEntry.getId())) {
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User can only change his own Information");
-		}
+	public User changeUserInformation(User requestingUser, User userInput) {
 
 		if (userInput.getUsername() != null) {
 			checkIfUserExists(userInput);
-			userDBEntry.setUsername(userInput.getUsername());
+			requestingUser.setUsername(userInput.getUsername());
 		}
 
 		if (userInput.getBio() != null) {
-			userDBEntry.setBio(userInput.getBio());
+			requestingUser.setBio(userInput.getBio());
 		}
 
 		if (userInput.getPassword() != null) {
-			userDBEntry.setPassword(userInput.getPassword());
+			requestingUser.setPassword(userInput.getPassword());
 		}
 
-		return userDBEntry;
+		return requestingUser;
 	}
 
 }

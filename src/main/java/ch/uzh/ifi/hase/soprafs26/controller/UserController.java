@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
@@ -20,6 +21,9 @@ import java.util.List;
  * the user.
  * The controller will receive the request and delegate the execution to the
  * UserService and finally return the result.
+ * 
+ * Authorization works over RequestHeader. Required is set to false so we can control the error and 
+ * throw 401 unauthorized with checkToken() instead of standard 400 bad request (for wrong header).
  */
 @RestController
 public class UserController {
@@ -59,6 +63,37 @@ public class UserController {
 		userService.logoutUser(user);
 	}
 
+	@GetMapping("/users/me")
+	@ResponseStatus(HttpStatus.OK)
+	public UserGetDTO getUser(@RequestHeader(value = "Authorization", required = false) String auth) {
+		User user = userService.checkToken(auth);
+		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
+	}
+	
+	@PatchMapping("/users/me")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public UserGetDTO changeUserProfile(@RequestBody UserPatchDTO dto,
+			@RequestHeader(value = "Authorization", required = false) String auth) {
+		User requestingUser = userService.checkToken(auth);
+		User userInput = DTOMapper.INSTANCE.convertUserPatchDTOtoEntity(dto);
+		User changedUser = userService.changeUserInformation(requestingUser, userInput);
+		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
+	}
+
+	@GetMapping("/users/{id}")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public UserGetDTO getUserById(@PathVariable("id") Long id,
+			@RequestHeader(value = "Authorization", required = false) String auth) {
+		userService.checkToken(auth);
+		User RequestedUser = userService.getUserById(id);
+		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(RequestedUser);
+	}
+
+
+	
+
 	@GetMapping("/users")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -76,26 +111,4 @@ public class UserController {
 		return userGetDTOs;
 	}
 
-	
-
-	@GetMapping("/users/{id}")
-	@ResponseStatus(HttpStatus.OK)
-	@ResponseBody
-	public UserGetDTO getUserById(@PathVariable("id") Long id,
-			@RequestHeader(value = "Authorization", required = false) String auth) {
-		userService.checkToken(auth);
-		User RequestedUser = userService.getUserById(id);
-		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(RequestedUser);
-	}
-
-
-	@PutMapping("/users/{id}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@ResponseBody
-	public void changeUserProfile(@PathVariable("id") Long id, @RequestBody UserPutDTO dto,
-			@RequestHeader(value = "Authorization", required = false) String auth) {
-		User user = userService.checkToken(auth);
-		User userInput = DTOMapper.INSTANCE.convertUserPutDTOtoEntity(dto);
-		user = userService.changeUserInformation(user, userInput);
-	}
 }
