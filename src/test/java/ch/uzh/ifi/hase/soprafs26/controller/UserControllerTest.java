@@ -7,6 +7,7 @@ import tools.jackson.databind.ObjectMapper;
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,6 +55,7 @@ public class UserControllerTest {
 		user.setName("Firstname Lastname");
 		user.setUsername("firstname@lastname");
 		user.setStatus(UserStatus.OFFLINE);
+		user.setBio("blabla");
 
 		List<User> allUsers = Collections.singletonList(user);
 
@@ -68,7 +71,8 @@ public class UserControllerTest {
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].name", is(user.getName())))
 				.andExpect(jsonPath("$[0].username", is(user.getUsername())))
-				.andExpect(jsonPath("$[0].status", is(user.getStatus().toString())));
+				.andExpect(jsonPath("$[0].status", is(user.getStatus().toString())))
+				.andExpect(jsonPath("$[0].bio", is(user.getBio().toString())));
 	}
 
 	@Test
@@ -80,10 +84,13 @@ public class UserControllerTest {
 		user.setUsername("testUsername");
 		user.setToken("1");
 		user.setStatus(UserStatus.ONLINE);
+		user.setPassword("23r89hf");
+		user.setBio("bio");
 
 		UserPostDTO userPostDTO = new UserPostDTO();
-		userPostDTO.setName("Test User");
+		userPostDTO.setBio("Bio");
 		userPostDTO.setUsername("testUsername");
+		userPostDTO.setPassword("Password");
 
 		given(userService.createUser(Mockito.any())).willReturn(user);
 
@@ -96,9 +103,118 @@ public class UserControllerTest {
 		mockMvc.perform(postRequest)
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.id", is(user.getId().intValue())))
+				.andExpect(jsonPath("$.username", is(user.getUsername())))
+				.andExpect(jsonPath("$.status", is(user.getStatus().toString())))
+				.andExpect(jsonPath("$.bio", is(user.getBio().toString())));
+	}
+
+	@Test
+	public void createUser_duplicateUsername_conflict() throws Exception {
+		UserPostDTO userPostDTO = new UserPostDTO();
+		userPostDTO.setUsername("happyBanana");
+		userPostDTO.setPassword("neverbeensecurer");
+		userPostDTO.setBio("22 is the age of an old woman");
+
+		given(userService.createUser(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.CONFLICT));
+
+		MockHttpServletRequestBuilder postRequest = post("/users").contentType(MediaType.APPLICATION_JSON).content(asJsonString(userPostDTO));
+		mockMvc.perform(postRequest).andExpect(status().isConflict());
+	}
+
+	@Test
+	public void getUserById_validInput_success() throws Exception {
+		// given
+		User user = new User();
+		user.setId(1L);
+		user.setName("Test User");
+		user.setUsername("testUsername");
+		user.setToken("1");
+		user.setStatus(UserStatus.ONLINE);
+		user.setBio("blabla");
+
+		//hier Mockito.anyLong, weil getUserById Long zurückgibt
+		given(userService.getUserById(Mockito.anyLong())).willReturn(user); 
+
+		// when/then -> do the request + validate the result
+		MockHttpServletRequestBuilder getRequest = get("/users/1")
+				.contentType(MediaType.APPLICATION_JSON);
+		// then
+		mockMvc.perform(getRequest)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id", is(user.getId().intValue())))
 				.andExpect(jsonPath("$.name", is(user.getName())))
 				.andExpect(jsonPath("$.username", is(user.getUsername())))
-				.andExpect(jsonPath("$.status", is(user.getStatus().toString())));
+				.andExpect(jsonPath("$.status", is(user.getStatus().toString())))
+				.andExpect(jsonPath("$.bio", is(user.getBio())));
+	}
+
+	@Test
+	public void getUserById_notPresentId_notFound() throws Exception {
+
+		//hier Mockito.anyLong, weil getUserById Long zurückgibt
+		given(userService.getUserById(Mockito.anyLong()))
+			.willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)); 
+
+		// when/then -> do the request + validate the result
+		MockHttpServletRequestBuilder getRequest = get("/users/2")
+				.contentType(MediaType.APPLICATION_JSON);
+		// then
+		mockMvc.perform(getRequest)
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	public void updateUser_validInput_noContent() throws Exception {
+
+		// given
+		User user = new User();
+		user.setId(1L);
+		user.setName("Test User");
+		user.setUsername("testUsername");
+		user.setToken("1");
+		user.setStatus(UserStatus.ONLINE);
+		user.setBio("blabla");
+		user.setPassword("first");
+
+		UserPutDTO userPutDTO = new UserPutDTO();
+		userPutDTO.setPassword("Second");
+
+		//hier Mockito.anyLong, weil getUserById Long zurückgibt
+		given(userService.getUserById(Mockito.anyLong())).willReturn(user);
+		//needs mocking of user by token too because that function is executed (not neede therefore in the test below, since never reached)
+		given(userService.getUserByToken(Mockito.any())).willReturn(user);
+		//nicht mocken da sowieso nichts returned wird...
+		// given(userService.updateUser(Mockito.any(), Mockito.any()));
+
+		// when/then -> do the request + validate the result
+		MockHttpServletRequestBuilder putRequest = put("/users/1")
+				.header("token","some-token")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(userPutDTO));
+
+		// then
+		mockMvc.perform(putRequest)
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	public void updateUser_notPresentId_notFound() throws Exception {
+
+		UserPutDTO userPutDTO = new UserPutDTO();
+		userPutDTO.setPassword("r345jd");
+
+		//hier Mockito.anyLong, weil getUserById Long zurückgibt
+		given(userService.getUserById(Mockito.anyLong()))
+			.willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)); 
+	
+		// when/then -> do the request + validate the result
+		MockHttpServletRequestBuilder putRequest = put("/users/2")
+				.header("token", "some-token")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(userPutDTO));
+		// then
+		mockMvc.perform(putRequest)
+				.andExpect(status().isNotFound());
 	}
 
 	/**
