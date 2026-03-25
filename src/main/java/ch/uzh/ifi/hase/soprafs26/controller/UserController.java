@@ -81,6 +81,14 @@ public class UserController {
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
 	}
 
+	@DeleteMapping("/users/me")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@ResponseBody
+	public void deleteUserProfile(@RequestHeader(value = "Authorization", required = false) String auth, @RequestBody String password) {
+		User user = userService.checkToken(auth);
+		userService.deleteUserProfile(user, password);
+	}
+
 	@GetMapping("/users/{id}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -91,8 +99,6 @@ public class UserController {
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(RequestedUser);
 	}
 
-
-	
 
 	@GetMapping("/users")
 	@ResponseStatus(HttpStatus.OK)

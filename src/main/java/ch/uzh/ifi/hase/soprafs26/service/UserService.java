@@ -48,8 +48,7 @@ public class UserService {
 		newUser.setToken(UUID.randomUUID().toString());
 		newUser.setStatus(UserStatus.ONLINE);
 		newUser.setCreationDate(LocalDateTime.now());
-		String hashedPassword = passwordEncoder.encode(newUser.getPassword()); // Hash the password before saving
-		newUser.setPassword(hashedPassword);
+		newUser.setPassword(hashPassword(newUser.getPassword()));
 
 		newUser = userRepository.save(newUser); // saves the given entity but data is only persisted in the database
 												// once flush() is called
@@ -64,6 +63,10 @@ public class UserService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"The username provided is not unique. Therefore, the user could not be created!");
 		}
+	}
+
+	private String hashPassword(String password) {
+		return passwordEncoder.encode(password);
 	}
 
 	public User loginUser(User userLoginData) {
@@ -140,10 +143,18 @@ public class UserService {
 		}
 
 		if (userInput.getPassword() != null) {
-			requestingUser.setPassword(userInput.getPassword());
+			requestingUser.setPassword(hashPassword(userInput.getPassword()));
 		}
 
 		return requestingUser;
+	}
+
+	public void deleteUserProfile(User user, String password) {
+		if (!passwordEncoder.matches(password, user.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
+		}
+		userRepository.delete(user);
+		userRepository.flush();
 	}
 
 }
