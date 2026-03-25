@@ -43,6 +43,8 @@ public class UserServiceIntegrationTest {
 		User testUser = new User();
 		testUser.setName("testName");
 		testUser.setUsername("testUsername");
+		testUser.setPassword("test28234876");
+		testUser.setBio("very fancy and impressive bio");
 
 		// when
 		User createdUser = userService.createUser(testUser);
@@ -51,8 +53,10 @@ public class UserServiceIntegrationTest {
 		assertEquals(testUser.getId(), createdUser.getId());
 		assertEquals(testUser.getName(), createdUser.getName());
 		assertEquals(testUser.getUsername(), createdUser.getUsername());
+		assertEquals(testUser.getPassword(), createdUser.getPassword());
+		assertEquals(testUser.getBio(), createdUser.getBio());
 		assertNotNull(createdUser.getToken());
-		assertEquals(UserStatus.OFFLINE, createdUser.getStatus());
+		assertEquals(UserStatus.ONLINE, createdUser.getStatus());
 	}
 
 	@Test
@@ -62,13 +66,14 @@ public class UserServiceIntegrationTest {
 		User testUser = new User();
 		testUser.setName("testName");
 		testUser.setUsername("testUsername");
+		testUser.setPassword("test28234876");
+		testUser.setBio("very fancy and impressive bio");
 		userService.createUser(testUser);
 
 		// attempt to create second user with same username
 		User testUser2 = new User();
 
 		// change the name but forget about the username
-		testUser2.setName("testName2");
 		testUser2.setUsername("testUsername");
 
 		// check that an error is thrown

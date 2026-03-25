@@ -14,6 +14,10 @@ import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
+
+import java.time.LocalDateTime;
+
 
 /**
  * User Service
@@ -40,8 +44,10 @@ public class UserService {
 
 	public User createUser(User newUser) {
 		newUser.setToken(UUID.randomUUID().toString());
-		newUser.setStatus(UserStatus.OFFLINE);
+		newUser.setStatus(UserStatus.ONLINE);
+		newUser.setCreationDate(LocalDateTime.now());
 		checkIfUserExists(newUser);
+
 		// saves the given entity but data is only persisted in the database once
 		// flush() is called
 		newUser = userRepository.save(newUser);
@@ -63,16 +69,99 @@ public class UserService {
 	 */
 	private void checkIfUserExists(User userToBeCreated) {
 		User userByUsername = userRepository.findByUsername(userToBeCreated.getUsername());
-		User userByName = userRepository.findByName(userToBeCreated.getName());
 
-		String baseErrorMessage = "The %s provided %s not unique. Therefore, the user could not be created!";
-		if (userByUsername != null && userByName != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					String.format(baseErrorMessage, "username and the name", "are"));
-		} else if (userByUsername != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.format(baseErrorMessage, "username", "is"));
-		} else if (userByName != null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.format(baseErrorMessage, "name", "is"));
+		if (userByUsername != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "The username provided is not unique. Therefore, the user could not be created!");
+		}
+	}
+
+	/**
+	 * This is a method that let's the user update their password and then logs them out of the platform.
+	 */
+	public void updateUser(User updatingUser, String newPassword) {
+		updatingUser.setPassword(newPassword);
+		updatingUser.setStatus(UserStatus.OFFLINE);
+		updatingUser = userRepository.save(updatingUser);
+		userRepository.flush();
+	
+		log.debug("Update Password for User: {}", updatingUser);
+		// return updatingUser;
+	}
+	/**
+	 * This is a method logs the user into the platform.
+	 */
+	public void loginUser(String username, String password) {
+		User loginUser = getUserByUsername(username);
+		if (loginUser.getPassword().equals(password)) {
+			loginUser.setStatus(UserStatus.ONLINE);
+			loginUser = userRepository.save(loginUser);
+			userRepository.flush();
+		
+			log.debug("Logging User in: {}", loginUser);
+		}
+		else {
+			log.debug("Given password is wrong: {}", loginUser.getId());
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+					String.format("The User gave wrong password: %s.", password));		
+		}
+	}
+	
+	/**
+	 * This is a method logs the user out of the platform.
+	 */
+	public void logoutUser(User logoutUser) {
+		logoutUser.setStatus(UserStatus.OFFLINE);
+		logoutUser = userRepository.save(logoutUser);
+		userRepository.flush();
+	
+		log.debug("Logging User out: {}", logoutUser);
+	}
+
+	/**
+	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
+	 */
+	public User getUserById(Long userId) {
+		Optional<User> requestedUser = userRepository.findById(userId);
+
+		if (!requestedUser.isPresent()) {
+			log.debug("User with ID could not be found by ID and 404 called: {}", userId, requestedUser);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+					String.format("The User with the ID %s could not be found.", userId));
+		} else {
+			log.debug("User found by ID and returned: {}", requestedUser);	
+			User confirmedUser = requestedUser.get();
+			return confirmedUser;
+		}
+	}
+	/**
+	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
+	 */
+	public User getUserByUsername(String username) {
+		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
+		//So I don't question that premade desicion. 
+		User requestedUser = userRepository.findByUsername(username); 
+
+		if (requestedUser == null) {
+			log.debug("User with username could not be found by username and 404 called: {}", username);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+					String.format("The User with the username %s could not be found.", username));
+		} else {
+			log.debug("User found by username and returned: {}", requestedUser);	
+			return requestedUser;
+		}
+	}
+	public User getUserByToken(String token) {
+		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
+		//So I don't question that premade desicion. 
+		User requestedUser = userRepository.findByToken(token); 
+
+		if (requestedUser == null) {
+			log.debug("User with username could not be found by token and 404 called");
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+					String.format("The User with this token could not be found."));
+		} else {
+			log.debug("User found by token and returned: {}", requestedUser);	
+			return requestedUser;
 		}
 	}
 }
