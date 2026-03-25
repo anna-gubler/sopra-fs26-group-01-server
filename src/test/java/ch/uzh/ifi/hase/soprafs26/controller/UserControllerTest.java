@@ -7,7 +7,6 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
-import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,6 @@ import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -261,7 +259,7 @@ public class UserControllerTest {
 		authUser.setToken(TOKEN);
 
 		// request dto (what the client wants to change)
-		UserPatchDTO dto = new UserPatchDTO();
+		UserPatchDTO dto = newUserPatchDTO();
 		dto.setBio("Updated bio");
 
 		// service returns updated user
