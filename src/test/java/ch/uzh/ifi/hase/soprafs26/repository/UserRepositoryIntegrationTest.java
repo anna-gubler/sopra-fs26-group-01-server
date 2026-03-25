@@ -1,3 +1,8 @@
+/*
+
+This Test is unnecessary since we removed the attribute "name". I still leave it here so we can orient ourselves on the structure for other tests later
+
+
 package ch.uzh.ifi.hase.soprafs26.repository;
 
 import org.junit.jupiter.api.Test;
@@ -26,7 +31,6 @@ class UserRepositoryIntegrationTest {
 	void findByName_success() {
 		// given
 		User user = new User();
-		user.setName("Firstname Lastname");
 		user.setUsername("firstname@lastname");
 		user.setStatus(UserStatus.OFFLINE);
 		user.setToken("1");
@@ -49,4 +53,6 @@ class UserRepositoryIntegrationTest {
 		assertEquals(found.getPassword(), user.getPassword());
 		assertEquals(found.getBio(), user.getBio());
 	}
+		
 }
+	*/

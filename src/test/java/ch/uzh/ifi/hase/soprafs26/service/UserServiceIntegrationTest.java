@@ -41,7 +41,6 @@ public class UserServiceIntegrationTest {
 		assertNull(userRepository.findByUsername("testUsername"));
 
 		User testUser = new User();
-		testUser.setName("testName");
 		testUser.setUsername("testUsername");
 		testUser.setPassword("test28234876");
 		testUser.setBio("very fancy and impressive bio");
@@ -51,7 +50,6 @@ public class UserServiceIntegrationTest {
 
 		// then
 		assertEquals(testUser.getId(), createdUser.getId());
-		assertEquals(testUser.getName(), createdUser.getName());
 		assertEquals(testUser.getUsername(), createdUser.getUsername());
 		assertEquals(testUser.getPassword(), createdUser.getPassword());
 		assertEquals(testUser.getBio(), createdUser.getBio());
@@ -64,7 +62,6 @@ public class UserServiceIntegrationTest {
 		assertNull(userRepository.findByUsername("testUsername"));
 
 		User testUser = new User();
-		testUser.setName("testName");
 		testUser.setUsername("testUsername");
 		testUser.setPassword("test28234876");
 		testUser.setBio("very fancy and impressive bio");
