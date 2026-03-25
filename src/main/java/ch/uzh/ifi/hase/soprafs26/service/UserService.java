@@ -76,45 +76,31 @@ public class UserService {
 	}
 
 	/**
-	 * This is a method that let's the user update their password and then logs them out of the platform.
-	 */
-	public void updateUser(User updatingUser, String newPassword) {
-		updatingUser.setPassword(newPassword);
-		updatingUser.setStatus(UserStatus.OFFLINE);
-		updatingUser = userRepository.save(updatingUser);
-		userRepository.flush();
-	
-		log.debug("Update Password for User: {}", updatingUser);
-		// return updatingUser;
-	}
-	/**
 	 * This is a method logs the user into the platform.
 	 */
-	public void loginUser(String username, String password) {
-		User loginUser = getUserByUsername(username);
-		if (loginUser.getPassword().equals(password)) {
-			loginUser.setStatus(UserStatus.ONLINE);
-			loginUser = userRepository.save(loginUser);
-			userRepository.flush();
-		
-			log.debug("Logging User in: {}", loginUser);
+	public User loginUser(User userLoginData) {
+		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
+
+		if (userDBEntry == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
 		}
-		else {
-			log.debug("Given password is wrong: {}", loginUser.getId());
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-					String.format("The User gave wrong password: %s.", password));		
+
+		if (!userLoginData.getPassword().equals(userDBEntry.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password");
 		}
+
+		userDBEntry.setStatus(UserStatus.ONLINE);
+		userDBEntry.setToken(UUID.randomUUID().toString());
+
+		return userDBEntry;
 	}
 	
 	/**
 	 * This is a method logs the user out of the platform.
 	 */
-	public void logoutUser(User logoutUser) {
-		logoutUser.setStatus(UserStatus.OFFLINE);
-		logoutUser = userRepository.save(logoutUser);
-		userRepository.flush();
-	
-		log.debug("Logging User out: {}", logoutUser);
+	public void logoutUser(User user) {
+		user.setToken(null);
+		user.setStatus(UserStatus.OFFLINE);
 	}
 
 	/**
@@ -133,35 +119,56 @@ public class UserService {
 			return confirmedUser;
 		}
 	}
-	/**
-	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
-	 */
-	public User getUserByUsername(String username) {
-		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
-		//So I don't question that premade desicion. 
-		User requestedUser = userRepository.findByUsername(username); 
 
-		if (requestedUser == null) {
-			log.debug("User with username could not be found by username and 404 called: {}", username);
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with the username %s could not be found.", username));
-		} else {
-			log.debug("User found by username and returned: {}", requestedUser);	
-			return requestedUser;
+	public User checkToken(String authorizationHeader) {
+		if (authorizationHeader == null || authorizationHeader.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
 		}
-	}
-	public User getUserByToken(String token) {
-		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
-		//So I don't question that premade desicion. 
-		User requestedUser = userRepository.findByToken(token); 
 
-		if (requestedUser == null) {
-			log.debug("User with username could not be found by token and 404 called");
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with this token could not be found."));
-		} else {
-			log.debug("User found by token and returned: {}", requestedUser);	
-			return requestedUser;
+		// erwartet: "Bearer <token>"
+		final String prefix = "Bearer ";
+		if (!authorizationHeader.startsWith(prefix)) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization header");
 		}
+
+		String token = authorizationHeader.substring(prefix.length()).trim();
+		if (token.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+		}
+
+		User user = userRepository.findByToken(token)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+
+		if (user.getStatus() != UserStatus.ONLINE) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not online");
+		}
+
+		return user;
 	}
+
+	public User changeUserInformation(User user, User userInput) {
+		User userDBEntry = userRepository.findById(userInput.getId())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+		// authenticate user
+		if (!user.getId().equals(userDBEntry.getId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User can only change his own Information");
+		}
+
+		if (userInput.getUsername() != null) {
+			checkIfUserExists(userInput);
+			userDBEntry.setUsername(userInput.getUsername());
+		}
+
+		if (userInput.getBio() != null) {
+			userDBEntry.setBio(userInput.getBio());
+		}
+
+		if (userInput.getPassword() != null) {
+			userDBEntry.setPassword(userInput.getPassword());
+		}
+
+		return userDBEntry;
+	}
+
 }
