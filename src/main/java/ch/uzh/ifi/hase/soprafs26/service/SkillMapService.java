@@ -31,6 +31,10 @@ public class SkillMapService {
     }
 
     public List<SkillMap> getSkillMaps() {
+        // TODO: Modifiy so that it only gives back a lits of 
+        // skillmaps I am a member of once the member functionality 
+        // is implemented currently returns all SkillMaps ever created 
+        // no matter if public or not (comment by Anna)
         return this.skillMapRepository.findAll();
     }
 
@@ -42,6 +46,17 @@ public class SkillMapService {
 
     public SkillMap createSkillMap(SkillMap newSkillMap, String token) {
         User owner = userService.getUserByToken(token);
+        // REST Spec Endpoint: 202.2 
+        // Invalid or incomplete skillmap object
+        if (newSkillMap.getTitle() == null || newSkillMap.getTitle().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required.");
+        }
+        if (newSkillMap.getIsPublic() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "isPublic is required.");
+        }
+        if (newSkillMap.getNumberOfLevels() == null || newSkillMap.getNumberOfLevels() <= 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "numberOfLevels must be at least 1.");
+        }
         newSkillMap.setOwnerId(owner.getId()); // statt setOwner()
         newSkillMap.setInviteCode(generateInviteCode());
         newSkillMap = skillMapRepository.save(newSkillMap);
@@ -49,10 +64,10 @@ public class SkillMapService {
         log.debug("Created SkillMap: {}", newSkillMap);
         return newSkillMap;
     }
-    //TODO: nicht SkillMap updates sondern ein DTO SkillMapPUtDTO definieren:
+    //TODO: nicht SkillMap updates sondern ein DTO SkillMapPUtDTO definieren (comment by Anna)
     public SkillMap updateSkillMap(Long skillMapId, SkillMap updates, String token) {
         User requester = userService.getUserByToken(token);
-        SkillMap existing = getSkillMapById(skillMapId); // 404 wenn nicht gefunden
+        SkillMap existing = getSkillMapById(skillMapId, token); // 404 wenn nicht gefunden
         checkIsOwner(existing, requester); // 403 wenn nicht Owner
 
         // nur diese Felder dürfen geändert werden
@@ -76,20 +91,31 @@ public class SkillMapService {
 		log.debug("Deleted SkillMap: {}", deletedSkillMap);
 	}
 
-	public SkillMap getSkillMapById(Long skillMapId) {
-		Optional<SkillMap> requestedSkillMap = skillMapRepository.findById(skillMapId);
+    public SkillMap getSkillMapById(Long skillMapId, String token) {
+        User requester = userService.getUserByToken(token);
 
-		if (!requestedSkillMap.isPresent()) {
-			log.debug("SkillMap with ID could not be found by ID and 404 called: {}", skillMapId, requestedSkillMap);
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The SkillMap with the ID %s could not be found.", skillMapId));
-		} else {
-			log.debug("SkillMap found by ID and returned: {}", requestedSkillMap);	
-			return requestedSkillMap.get();
-		}
-	}
+        Optional<SkillMap> requestedSkillMap = skillMapRepository.findById(skillMapId);
 
-    //this needs to be outside the method in order that a seed is set
+        // 203.3
+        if (!requestedSkillMap.isPresent()) {
+            log.debug("SkillMap with ID could not be found: {}", skillMapId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    String.format("The SkillMap with the ID %s could not be found.", skillMapId));
+        }
+
+        SkillMap map = requestedSkillMap.get();
+
+        // 203.2
+        //TODO: as soon as membership is implemented one can change this one to be also allowed when 
+        // subscribed to a skill map (comment by Anna)
+        if (!map.getIsPublic() && !map.getOwnerId().equals(requester.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to this private skill map.");
+        }
+
+        return map;
+    }
+
+    //Comment Anna: this needs to be outside the method in order that a seed is set
     SecureRandom random = new SecureRandom();
     private String generateInviteCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
