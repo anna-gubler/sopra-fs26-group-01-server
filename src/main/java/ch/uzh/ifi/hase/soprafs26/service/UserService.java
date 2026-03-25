@@ -82,11 +82,11 @@ public class UserService {
 		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
 
 		if (userDBEntry == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or incomplete login request");
 		}
 
 		if (!userLoginData.getPassword().equals(userDBEntry.getPassword())) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password");
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
 		}
 
 		userDBEntry.setStatus(UserStatus.ONLINE);

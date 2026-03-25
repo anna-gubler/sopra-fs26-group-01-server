@@ -41,6 +41,24 @@ public class UserController {
 		return entitiyDto;
 	}
 
+	@PutMapping("/auth/login")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public UserGetDTO login(@RequestBody UserPutDTO userLoginDTO) {
+		User userLoginData = DTOMapper.INSTANCE.convertUserPutDTOtoEntity(userLoginDTO);
+		User user = userService.loginUser(userLoginData);
+		UserGetDTO userDTO = DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
+		userDTO.setToken(user.getToken()); // include token
+		return userDTO;
+	}
+
+	@PutMapping("/auth/logout")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void logout(@RequestHeader(value = "Authorization", required = false) String auth) {
+		User user = userService.checkToken(auth);
+		userService.logoutUser(user);
+	}
+
 	@GetMapping("/users")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
@@ -79,23 +97,5 @@ public class UserController {
 		User user = userService.checkToken(auth);
 		User userInput = DTOMapper.INSTANCE.convertUserPutDTOtoEntity(dto);
 		user = userService.changeUserInformation(user, userInput);
-	}
-
-	@PutMapping("/login")
-	@ResponseStatus(HttpStatus.OK)
-	@ResponseBody
-	public UserGetDTO login(@RequestBody UserPutDTO userLoginDTO) {
-		User userLoginData = DTOMapper.INSTANCE.convertUserPutDTOtoEntity(userLoginDTO);
-		User user = userService.loginUser(userLoginData);
-		UserGetDTO userDTO = DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
-		userDTO.setToken(user.getToken()); // include token
-		return userDTO;
-	}
-
-	@PutMapping("/logout")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void logout(@RequestHeader(value = "Authorization", required = false) String auth) {
-		User user = userService.checkToken(auth);
-		userService.logoutUser(user);
 	}
 }
