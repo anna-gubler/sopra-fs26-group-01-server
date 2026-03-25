@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -31,7 +32,7 @@ import java.time.LocalDateTime;
 public class UserService {
 
 	private final Logger log = LoggerFactory.getLogger(UserService.class);
-
+	private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 	private final UserRepository userRepository;
 
 	public UserService(@Qualifier("userRepository") UserRepository userRepository) {
@@ -46,7 +47,12 @@ public class UserService {
 		newUser.setToken(UUID.randomUUID().toString());
 		newUser.setStatus(UserStatus.ONLINE);
 		newUser.setCreationDate(LocalDateTime.now());
+
 		checkIfUserExists(newUser);
+
+		//Hash the password before saving
+		String hashedPassword = passwordEncoder.encode(newUser.getPassword());
+		newUser.setPassword(hashedPassword);
 
 		// saves the given entity but data is only persisted in the database once
 		// flush() is called
@@ -85,7 +91,7 @@ public class UserService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or incomplete login request");
 		}
 
-		if (!userLoginData.getPassword().equals(userDBEntry.getPassword())) {
+		if (!passwordEncoder.matches(userLoginData.getPassword(), userDBEntry.getPassword())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
 		}
 
