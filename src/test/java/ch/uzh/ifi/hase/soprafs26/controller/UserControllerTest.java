@@ -67,6 +67,7 @@ public class UserControllerTest {
 		UserPostDTO userPostDTO = new UserPostDTO();
 		userPostDTO.setUsername(USERNAME);
 		userPostDTO.setBio(BIO);
+		userPostDTO.setPassword(PASSWORD);
 		return userPostDTO;
 	}
 
@@ -91,10 +92,9 @@ public class UserControllerTest {
 	}
 
 	@Test
-	public void givenValidUserPostDTO_whenAuthRegister_thenReturnCreatedUserAndToken() throws Exception {
+	public void givenValidUserPostDTO_whenAuthRegister_thenReturnCreatedUserWithToken() throws Exception {
 		// given
 		UserPostDTO userPostDTO = newUserPostDTO();
-		userPostDTO.setPassword(PASSWORD);
 		User user = newUser();
 		user.setId(1L);
 		user.setToken(TOKEN);
@@ -116,6 +116,116 @@ public class UserControllerTest {
 				.andExpect(jsonPath("$.token", is(user.getToken())))
 				.andExpect(jsonPath("$.bio", is(user.getBio())))
 				.andExpect(jsonPath("$.status", is(user.getStatus().toString())));
+	}
+
+	@Test
+	public void givenInvalidUserPostDTO_whenAuthRegister_thenReturnBadRequest() throws Exception {
+		// given: invalid DTO (Username fehlt)
+		UserPostDTO invalidDto = newUserPostDTO();
+		invalidDto.setUsername(null);
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/register")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(invalidDto));
+
+		mockMvc.perform(postRequest)
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	public void givenExistingUsername_whenAuthRegister_thenReturnConflict() throws Exception {
+		UserPostDTO invalidDto = newUserPostDTO();
+
+		// mocks
+		given(userService.createUser(any())).willThrow(new ResponseStatusException(
+				HttpStatus.CONFLICT, "Username already exists"));
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/register")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(invalidDto));
+
+		mockMvc.perform(postRequest)
+				.andExpect(status().isConflict());
+	}
+
+
+	@Test
+	public void givenValidLoginAttempt_whenAuthLogin_thenReturnUserWithToken() throws Exception{
+		UserPostDTO userLoginData = newUserPostDTO();
+		User user = newUser();
+		user.setId(1L);
+		user.setToken(TOKEN);
+		user.setStatus(UserStatus.ONLINE);
+
+		//mocks
+		given(userService.loginUser(any())).willReturn(user);
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(userLoginData));
+
+		mockMvc.perform(postRequest)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id", is(user.getId().intValue())))
+				.andExpect(jsonPath("$.username", is(user.getUsername())))
+				.andExpect(jsonPath("$.token", is(user.getToken())))
+				.andExpect(jsonPath("$.bio", is(user.getBio())))
+				.andExpect(jsonPath("$.status", is(user.getStatus().toString())));
+	}
+
+	@Test
+	public void givenMissingCredentials_whenAuthLogin_thenReturnBadRequest() throws Exception{
+		UserPostDTO invalidLoginData = newUserPostDTO();
+		invalidLoginData.setUsername(null);
+
+		//doesnt require mocking loginUser, since BadRequest already gets thrown with @Valid and @NotBlank logic of UserPostDTO
+		//but there would be an additional safeguard in loginUser anyway
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(invalidLoginData));
+		
+		mockMvc.perform(postRequest)
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	public void givenInvalidCredentials_whenAuthLogin_thenReturnUnauthorized() throws Exception{
+		UserPostDTO invalidLoginData = newUserPostDTO();
+
+		given(userService.loginUser(any())).willThrow(new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED, "Invalid login"));
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(invalidLoginData));
+		
+		mockMvc.perform(postRequest)
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	public void givenValidTokenAndLoggedIn_whenAuthLogout_thenReturnNoContent() throws Exception{
+		User logoutUser = newUser();
+		mockUserAuthentication(logoutUser, true);
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/logout")
+				.contentType(MediaType.APPLICATION_JSON);
+		
+		mockMvc.perform(postRequest)
+				.andExpect(status().isNoContent());
+	}
+
+	@Test //Tests both invalid token and user offline, since both is checked in mockUserAuthentication (and not in logoutUser)
+	public void givenInvalidAuthentication_whenAuthLogout_thenReturnUnauthorized() throws Exception{
+		User logoutUser = newUser();
+		mockUserAuthentication(logoutUser, false);
+
+		MockHttpServletRequestBuilder postRequest = post("/auth/logout")
+				.contentType(MediaType.APPLICATION_JSON);
+		
+		mockMvc.perform(postRequest)
+				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -141,20 +251,6 @@ public class UserControllerTest {
 				.andExpect(jsonPath("$[0].bio", is(user.getBio())))
 				.andExpect(jsonPath("$[0].token").doesNotExist())
 				.andExpect(jsonPath("$[0].status", is(user.getStatus().toString())));
-	}
-
-	@Test
-	public void givenInvalidUserPostDTO_whenAuthRegister_thenReturnBadRequest() throws Exception {
-		// given: invalid DTO (Username fehlt)
-		UserPostDTO invalidDto = newUserPostDTO();
-		invalidDto.setUsername(null);
-
-		MockHttpServletRequestBuilder postRequest = post("/auth/register")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(asJsonString(invalidDto));
-
-		mockMvc.perform(postRequest)
-				.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -286,18 +382,6 @@ public class UserControllerTest {
 
 	/*
 	 * Future Tests If I decide to stay with these endpoints for the group project
-	 * 
-	 * @Test
-	 * public void givenValidPassword_whenPutLogin_thenReturnUserAndToken() throws
-	 * Exception {
-	 * 
-	 * }
-	 * 
-	 * @Test
-	 * public void givenInvalidPassword_whenPutLogin_thenReturnUnauthorized() throws
-	 * Exception {
-	 * 
-	 * }
 	 * 
 	 * @Test
 	 * public void givenValidCredentials_whenPutLogout_thenReturnNoContent() throws

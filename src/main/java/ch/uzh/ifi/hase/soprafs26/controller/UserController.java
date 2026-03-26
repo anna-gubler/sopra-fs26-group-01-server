@@ -7,7 +7,6 @@ import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
-import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import jakarta.validation.Valid;
@@ -45,18 +44,18 @@ public class UserController {
 		return entitiyDto;
 	}
 
-	@PutMapping("/auth/login")
+	@PostMapping("/auth/login")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public UserGetDTO login(@RequestBody UserPutDTO userLoginDTO) {
-		User userLoginData = DTOMapper.INSTANCE.convertUserPutDTOtoEntity(userLoginDTO);
+	public UserGetDTO login(@Valid @RequestBody UserPostDTO userLoginDTO) {
+		User userLoginData = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userLoginDTO);
 		User user = userService.loginUser(userLoginData);
 		UserGetDTO userDTO = DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
 		userDTO.setToken(user.getToken()); // include token
 		return userDTO;
 	}
 
-	@PutMapping("/auth/logout")
+	@PostMapping("/auth/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void logout(@RequestHeader(value = "Authorization", required = false) String auth) {
 		User user = userService.checkToken(auth);

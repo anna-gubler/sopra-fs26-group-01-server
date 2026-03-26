@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 
 public class UserPostDTO {
 
-	@NotBlank
 	private String bio;
 
 	@NotBlank
