@@ -7,6 +7,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -15,40 +16,53 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * works.
  */
 public class DTOMapperTest {
-	@Test
-	public void testCreateUser_fromUserPostDTO_toUser_success() {
-		// create UserPostDTO
+
+	// define constants to not copypaste stuff all the time
+	private static final String USERNAME = "firstname@lastname";
+	private static final String BIO = "Hey there! I'm using Whatsapp.";
+	private static final String TOKEN = "6dd696b4-83a2-42a6-8769-e2d755c6b8b8";
+
+	// create new UserPostDTO instance
+	private static UserPostDTO newUserPostDTO() {
 		UserPostDTO userPostDTO = new UserPostDTO();
-		userPostDTO.setBio("bio");
-		userPostDTO.setUsername("username");
-		userPostDTO.setPassword("2345");
+		userPostDTO.setUsername(USERNAME);
+		userPostDTO.setBio(BIO);
+		return userPostDTO;
+	}
 
-		// MAP -> Create user
-		User user = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
-
-		// check content
-		assertEquals(userPostDTO.getBio(), user.getBio());
-		assertEquals(userPostDTO.getUsername(), user.getUsername());
-		assertEquals(userPostDTO.getPassword(), user.getPassword());
+	// create new User instance
+	private static User newUser() {
+		User user = new User();
+		user.setUsername(USERNAME);
+		user.setBio(BIO);
+		user.setToken(TOKEN);
+		user.setStatus(UserStatus.OFFLINE);
+		return user;
 	}
 
 	@Test
-	public void testGetUser_fromUser_toUserGetDTO_success() {
-		// create User
-		User user = new User();
-		user.setUsername("firstname@lastname");
-		user.setStatus(UserStatus.OFFLINE);
-		user.setToken("1");
-		user.setBio("bio");
+	public void shouldConvertUserPostDTOToEntity() {
+		UserPostDTO userPostDTO = newUserPostDTO();
 
-		// MAP -> Create UserGetDTO
+		User user = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
+
+		assertAll(
+				() -> assertEquals(userPostDTO.getUsername(), user.getUsername()),
+				() -> assertEquals(userPostDTO.getBio(), user.getBio()));
+
+	}
+
+	@Test
+	public void shouldConvertEntityToUserGetDTO() {
+		User user = newUser();
+		user.setId(1L);
+
 		UserGetDTO userGetDTO = DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
 
-		// check content
-		assertEquals(user.getId(), userGetDTO.getId());
-		assertEquals(user.getUsername(), userGetDTO.getUsername());
-		assertEquals(user.getStatus(), userGetDTO.getStatus());
-		assertEquals(user.getBio(), userGetDTO.getBio());
+		assertAll(
+				() -> assertEquals(user.getId(), userGetDTO.getId()),
+				() -> assertEquals(user.getUsername(), userGetDTO.getUsername()),
+				() -> assertEquals(user.getStatus(), userGetDTO.getStatus()));
 
 	}
 }
