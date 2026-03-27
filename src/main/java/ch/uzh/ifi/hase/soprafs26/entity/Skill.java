@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import jakarta.persistence.*;
 
 @Entity

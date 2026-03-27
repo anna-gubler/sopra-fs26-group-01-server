@@ -2,7 +2,10 @@ package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,10 +20,14 @@ public class SkillService {
 
     private final SkillRepository skillRepository;
     private final SkillMapRepository skillMapRepository;
+    private final UserRepository userRepository;
+    private final SkillMapMembershipRepository skillMapMembershipRepository;
 
     public SkillService(SkillRepository skillRepository, SkillMapRepository skillMapRepository) {
         this.skillRepository = skillRepository;
         this.skillMapRepository = skillMapRepository;
+        this.userRepository = null;
+        this.skillMapMembershipRepository = null;
     }
 
     // #52 - POST
@@ -28,7 +35,10 @@ public class SkillService {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
 
-        if (!skillMap.getOwner().getToken().equals(token)) {
+        User owner = userRepository.findById(skillMap.getOwnerId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+
+        if (!owner.getToken().equals(token)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the map owner can add skills");
         }
         if (newSkill.getName() == null || newSkill.getName().isBlank()) {
@@ -48,7 +58,11 @@ public class SkillService {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
-        if (!skill.getSkillMap().getOwner().getToken().equals(token)) {
+        Long ownerId = skill.getSkillMap().getOwnerId();
+        User owner = userRepository.findById(ownerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+
+        if (!owner.getToken().equals(token)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the map owner can delete skills");
         }
 
@@ -60,8 +74,16 @@ public class SkillService {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
 
-        if (!skillMap.getOwner().getToken().equals(token)
-                && skillMap.getMembers().stream().noneMatch(m -> m.getToken().equals(token))) {
+        User owner = userRepository.findById(skillMap.getOwnerId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        boolean isMember = skillMapMembershipRepository
+            .findBySkillMapId(skillMapId)
+            .stream()
+            .anyMatch(m -> userRepository.findById(m.getUserId())
+                .map(u -> u.getToken().equals(token))
+                .orElse(false));
+        if (!owner.getToken().equals(token)
+                && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
@@ -74,10 +96,18 @@ public class SkillService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
         SkillMap skillMap = skill.getSkillMap();
-        boolean isOwner = skillMap.getOwner().getToken().equals(token);
-        boolean isMember = skillMap.getMembers().stream()
-            .anyMatch(m -> m.getToken().equals(token));
-
+        
+        User owner = userRepository.findById(skillMap.getOwnerId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        boolean isOwner = owner.getToken().equals(token);
+        
+        boolean isMember = skillMapMembershipRepository
+            .findBySkillMapId(skillMap.getId())  // skillMap.getId() statt skillMapId (existiert nicht hier)
+            .stream()
+            .anyMatch(m -> userRepository.findById(m.getUserId())  // m hat kein getToken(), lookup nötig
+                .map(u -> u.getToken().equals(token))
+                .orElse(false));
+                
         if (!isOwner && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to the parent skillmap");
         }
@@ -90,9 +120,13 @@ public class SkillService {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
-        if (!skill.getSkillMap().getOwner().getToken().equals(token)) {
+        User owner = userRepository.findById(skill.getSkillMap().getOwnerId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+
+        if (!owner.getToken().equals(token)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can update skills");
         }
+
         if (updatedSkill.getLevel() != null) {
             int maxLevel = skill.getSkillMap().getNumberOfLevels();
             if (updatedSkill.getLevel() < 1 || updatedSkill.getLevel() > maxLevel) {
