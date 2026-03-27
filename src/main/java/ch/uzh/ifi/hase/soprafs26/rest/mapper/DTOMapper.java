@@ -3,9 +3,13 @@ package ch.uzh.ifi.hase.soprafs26.rest.mapper;
 import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
+import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
@@ -52,6 +56,21 @@ public interface DTOMapper {
 	@Mapping(source = "seed", target = "seed")
 	@Mapping(source = "style", target = "style")
 	UserGetDTO convertEntityToUserGetDTO(User user);
+
+	@Mapping(source = "skillMap.id", target = "mapId")
+	SkillGetDTO convertEntityToSkillGetDTO(Skill skill);
+
+	@Mapping(target = "skillMap", ignore = true)
+	@Mapping(target = "isLocked", ignore = true)
+	@Mapping(target = "createdAt", ignore = true)
+	@Mapping(target = "updatedAt", ignore = true)
+	Skill convertSkillPostDTOtoEntity(SkillPostDTO skillPostDTO);
+
+	@Mapping(target = "skillMap", ignore = true)
+	@Mapping(target = "isLocked", ignore = true)
+	@Mapping(target = "createdAt", ignore = true)
+	@Mapping(target = "updatedAt", ignore = true)
+	Skill convertSkillPutDTOtoEntity(SkillPutDTO skillPutDTO);
 
 	@Mapping(source = "username", target = "username")
 	@Mapping(source = "bio", target = "bio")
