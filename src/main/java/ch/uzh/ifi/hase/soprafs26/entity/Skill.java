@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import jakarta.persistence.*;
 
 @Entity
@@ -31,8 +31,9 @@ public class Skill {
 
     private String difficulty;
 
-    @Column(nullable = false)
-    private Long mapId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "skill_map_id", nullable = false)
+    private SkillMap skillMap;
 
     private Boolean isLocked;
 
@@ -51,7 +52,7 @@ public class Skill {
     public Float getPositionY() { return positionY; }
     public String getResources() { return resources; }
     public String getDifficulty() { return difficulty; }
-    public Long getMapId() { return mapId; }
+    public SkillMap getSkillMap() { return skillMap; }   // ← ersetzt getMapId()
     public Boolean getIsLocked() { return isLocked; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
@@ -65,7 +66,7 @@ public class Skill {
     public void setPositionY(Float positionY) { this.positionY = positionY; }
     public void setResources(String resources) { this.resources = resources; }
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
-    public void setMapId(Long mapId) { this.mapId = mapId; }
+    public void setSkillMap(SkillMap skillMap) { this.skillMap = skillMap; }  // ← ersetzt setMapId()
     public void setIsLocked(Boolean isLocked) { this.isLocked = isLocked; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
