@@ -13,6 +13,8 @@ public class UserGetDTO {
 	private String bio;
 	private LocalDateTime creationDate;
 	private String token;
+	private String seed;
+	private String style;
 
 	public Long getId() {
 		return id;
@@ -60,5 +62,21 @@ public class UserGetDTO {
 
 	public void setToken(String token) {
 		this.token = token;
+	}
+
+	public String getSeed() {
+		return seed;
+	}
+
+	public void setSeed(String seed) {
+		this.seed = seed;
+	}
+
+	public String getStyle() {
+		return style;
+	}
+
+	public void setStyle(String style) {
+		this.style = style;
 	}
 }
