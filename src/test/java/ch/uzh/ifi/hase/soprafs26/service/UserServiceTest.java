@@ -267,15 +267,18 @@ public class UserServiceTest {
 		assertThrows(ResponseStatusException.class, () -> userService.deleteUserProfile(user, "wrongPassword"));
 	}
 
-	@Test
-    public void createUser_avatarGeneration_success() {
-        // when -> any object is being save in the userRepository -> return the dummy
-        // testUser
-        User createdUser = userService.createUser(testUser);
+	// --- AvatarGeneration ---
 
-        // then -> check that seed and style are set correctly
-        assertEquals(testUser.getUsername(), createdUser.getSeed());
-        assertEquals("bottts-neutral", createdUser.getStyle());
-    }
+	@Test
+	public void createUser_avatarGeneration_success() {
+    	User input = buildNewUser();
+    
+    	Mockito.when(userRepository.save(Mockito.any())).thenReturn(input);
+    
+    	User createdUser = userService.createUser(input);
+
+    	assertEquals(TEST_USERNAME, createdUser.getSeed());
+    	assertEquals("bottts-neutral", createdUser.getStyle());
+	}	
 
 }
