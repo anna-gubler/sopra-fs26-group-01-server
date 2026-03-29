@@ -7,6 +7,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutAvatarDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
  * UserControllerTest
@@ -466,5 +468,19 @@ public class UserControllerTest {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					String.format("The request body could not be created.%s", e.toString()));
 		}
+	}
+
+	@Test
+	public void givenUser_whenChangeAvatar_thenSuccessful() throws Exception {
+		mockUserAuthentication(newUser(), true);
+
+		given(userService.changeUserAvatar(any(User.class), any(User.class))).willReturn(newUser());
+
+		MockHttpServletRequestBuilder putRequest = put("/users/me/avatar")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(new UserPutAvatarDTO()));
+
+		mockMvc.perform(putRequest)
+				.andExpect(status().isOk());
 	}
 }
