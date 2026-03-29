@@ -159,4 +159,17 @@ public class UserService {
 		userRepository.flush();
 	}
 
+	public User changeUserAvatar(User requestingUser, User userInput) {
+
+		if (userInput.getStyle() != null) {
+			requestingUser.setStyle(userInput.getStyle());
+		}
+
+		if (userInput.getSeed() != null) {
+			requestingUser.setSeed(userInput.getSeed());
+		}
+
+		return requestingUser;
+	}
+
 }

@@ -9,6 +9,7 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutAvatarDTO;
 import jakarta.validation.Valid;
 
 import java.util.ArrayList;
@@ -114,6 +115,16 @@ public class UserController {
 			userGetDTOs.add(DTOMapper.INSTANCE.convertEntityToUserGetDTO(user));
 		}
 		return userGetDTOs;
+	}
+
+	@PutMapping("/users/me/avatar")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public UserGetDTO changeUserAvatar(@RequestBody UserPutAvatarDTO dto, @RequestHeader(value = "Authorization", required = false) String auth) {
+		User requestingUser = userService.checkToken(auth);
+		User userInput = DTOMapper.INSTANCE.convertUserPutAvatarDTOtoEntity(dto);
+		User changedUser = userService.changeUserAvatar(requestingUser, userInput);
+		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
 	}
 
 }
