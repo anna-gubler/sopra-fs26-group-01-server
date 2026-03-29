@@ -12,4 +12,5 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 public interface SkillMapRepository extends JpaRepository<SkillMap,Long> {
     List<SkillMap> findByOwnerId(Long ownerId);
     boolean existsByInviteCode(String inviteCode);
+    java.util.Optional<SkillMap> findByInviteCode(String inviteCode);
 }

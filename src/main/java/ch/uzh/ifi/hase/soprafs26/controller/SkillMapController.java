@@ -8,8 +8,11 @@ import org.springframework.web.bind.annotation.*;
 
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
@@ -71,7 +74,13 @@ public class SkillMapController {
         skillMapService.deleteSkillMap(skillMapId, token);
     }
 
-    // 206 - POST /skillmaps/join (future sprint)
+    // 206 - POST /skillmaps/join
+    @PostMapping("/join")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SkillMapMembershipGetDTO joinSkillMap(@RequestBody SkillMapJoinDTO joinDTO, @RequestHeader("Authorization") String token) {
+        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getSkillMapId(), joinDTO.getInviteCode(), token);
+        return DTOMapper.INSTANCE.convertEntityToSkillMapMembershipGetDTO(membership);
+    }
 
     // 207 - GET /skillmaps/{skillMapId}/members
     @GetMapping("/{skillMapId}/members")

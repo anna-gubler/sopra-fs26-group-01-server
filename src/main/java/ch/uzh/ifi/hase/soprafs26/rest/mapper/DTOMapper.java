@@ -4,8 +4,10 @@ import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
@@ -87,4 +89,11 @@ public interface DTOMapper {
     @Mapping(source = "createdAt", target = "createdAt")
     @Mapping(source = "updatedAt", target = "updatedAt")
     SkillMapGetDTO convertEntityToSkillMapGetDTO(SkillMap skillMap);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "userId", target = "userId")
+    @Mapping(source = "skillMapId", target = "skillMapId")
+    @Mapping(source = "role", target = "role")
+    @Mapping(source = "joinedAt", target = "joinedAt")
+    SkillMapMembershipGetDTO convertEntityToSkillMapMembershipGetDTO(SkillMapMembership membership);
 }
