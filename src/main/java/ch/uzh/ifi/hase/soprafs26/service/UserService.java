@@ -130,6 +130,10 @@ public class UserService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 	}
 
+	public User getUserByToken(String token) {
+    return userRepository.findByToken(token)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+	}
 
 	public User changeUserInformation(User requestingUser, User userInput) {
 
