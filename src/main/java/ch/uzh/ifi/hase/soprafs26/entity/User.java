@@ -46,6 +46,12 @@ public class User implements Serializable {
 	@Column(nullable = false)
 	private LocalDateTime creationDate;
 
+	@Column(nullable = false)
+	private String style;
+
+	@Column(nullable = false)
+	private String seed;
+
 	public Long getId() {
 		return id;
 	}
@@ -100,5 +106,21 @@ public class User implements Serializable {
 
 	public void setCreationDate(LocalDateTime creationDate) {
 		this.creationDate = creationDate;
+	}
+
+	public String getStyle() {
+		return style;
+	}
+	
+	public void setStyle(String style) {
+		this.style = style;
+	}
+
+	public String getSeed() {
+		return seed;
+	}
+
+	public void setSeed(String seed) {
+		this.seed = seed;
 	}
 }

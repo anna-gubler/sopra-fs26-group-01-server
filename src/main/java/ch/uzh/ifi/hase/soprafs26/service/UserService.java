@@ -49,6 +49,8 @@ public class UserService {
 		newUser.setStatus(UserStatus.ONLINE);
 		newUser.setCreationDate(LocalDateTime.now());
 		newUser.setPassword(hashPassword(newUser.getPassword()));
+		newUser.setStyle("bottts-neutral");
+		newUser.setSeed(newUser.getUsername());
 
 		newUser = userRepository.save(newUser); // saves the given entity but data is only persisted in the database
 												// once flush() is called
@@ -159,6 +161,19 @@ public class UserService {
 		}
 		userRepository.delete(user);
 		userRepository.flush();
+	}
+
+	public User changeUserAvatar(User requestingUser, User userInput) {
+
+		if (userInput.getStyle() != null) {
+			requestingUser.setStyle(userInput.getStyle());
+		}
+
+		if (userInput.getSeed() != null) {
+			requestingUser.setSeed(userInput.getSeed());
+		}
+
+		return requestingUser;
 	}
 
 }

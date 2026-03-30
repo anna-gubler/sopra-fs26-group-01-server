@@ -59,6 +59,8 @@ public class UserServiceIntegrationTest {
 		assertEquals(TEST_USERNAME, createdUser.getUsername());
 		assertEquals(TEST_BIO, createdUser.getBio());
 		assertEquals(UserStatus.ONLINE, createdUser.getStatus());
+		assertEquals("bottts-neutral", createdUser.getStyle());
+		assertEquals(TEST_USERNAME, createdUser.getSeed());	
 		assertNotNull(createdUser.getId());
 		assertNotNull(createdUser.getToken());
 		assertNotNull(createdUser.getCreationDate());
