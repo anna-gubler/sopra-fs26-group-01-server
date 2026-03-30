@@ -3,7 +3,13 @@ package ch.uzh.ifi.hase.soprafs26.rest.mapper;
 import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
@@ -59,4 +65,35 @@ public interface DTOMapper {
 	@Mapping(target = "creationDate", ignore = true)
 	@Mapping(source = "password", target = "password")
 	User convertUserPatchDTOtoEntity(UserPatchDTO userPatchDTO);
+
+	//Skillmap Mappings
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "description", target = "description")
+    @Mapping(source = "isPublic", target = "isPublic")
+    @Mapping(source = "numberOfLevels", target = "numberOfLevels")
+    SkillMap convertSkillMapPostDTOtoEntity(SkillMapPostDTO skillMapPostDTO);
+
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "description", target = "description")
+    @Mapping(source = "isPublic", target = "isPublic")
+    @Mapping(source = "numberOfLevels", target = "numberOfLevels")
+    SkillMap convertSkillMapPutDTOtoEntity(SkillMapPutDTO skillMapPutDTO);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "title", target = "title")
+    @Mapping(source = "description", target = "description")
+    @Mapping(source = "isPublic", target = "isPublic")
+    @Mapping(source = "inviteCode", target = "inviteCode")
+    @Mapping(source = "numberOfLevels", target = "numberOfLevels")
+    @Mapping(source = "ownerId", target = "ownerId")
+    @Mapping(source = "createdAt", target = "createdAt")
+    @Mapping(source = "updatedAt", target = "updatedAt")
+    SkillMapGetDTO convertEntityToSkillMapGetDTO(SkillMap skillMap);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "userId", target = "userId")
+    @Mapping(source = "skillMapId", target = "skillMapId")
+    @Mapping(source = "role", target = "role")
+    @Mapping(source = "joinedAt", target = "joinedAt")
+    SkillMapMembershipGetDTO convertEntityToSkillMapMembershipGetDTO(SkillMapMembership membership);
 }
