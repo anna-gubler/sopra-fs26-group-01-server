@@ -8,12 +8,13 @@ import java.time.LocalDateTime;
 public class UserGetDTO {
 
 	private Long id;
-	private String name;
 	private String username;
 	private UserStatus status;
 	private String bio;
 	private LocalDateTime creationDate;
 	private String token;
+	private String seed;
+	private String style;
 
 	public Long getId() {
 		return id;
@@ -21,14 +22,6 @@ public class UserGetDTO {
 
 	public void setId(Long id) {
 		this.id = id;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public String getUsername() {
@@ -69,5 +62,21 @@ public class UserGetDTO {
 
 	public void setToken(String token) {
 		this.token = token;
+	}
+
+	public String getSeed() {
+		return seed;
+	}
+
+	public void setSeed(String seed) {
+		this.seed = seed;
+	}
+
+	public String getStyle() {
+		return style;
+	}
+
+	public void setStyle(String style) {
+		this.style = style;
 	}
 }

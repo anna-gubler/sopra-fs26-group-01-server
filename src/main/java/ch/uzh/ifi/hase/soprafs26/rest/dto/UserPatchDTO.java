@@ -1,7 +1,7 @@
 package ch.uzh.ifi.hase.soprafs26.rest.dto;
 
 
-public class UserPutDTO {
+public class UserPatchDTO {
 
 	private Long id;
 

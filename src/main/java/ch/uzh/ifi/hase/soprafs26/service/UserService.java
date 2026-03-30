@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -14,10 +15,8 @@ import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.Optional;
 
 import java.time.LocalDateTime;
-
 
 /**
  * User Service
@@ -31,137 +30,150 @@ import java.time.LocalDateTime;
 public class UserService {
 
 	private final Logger log = LoggerFactory.getLogger(UserService.class);
-
+	private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 	private final UserRepository userRepository;
 
 	public UserService(@Qualifier("userRepository") UserRepository userRepository) {
 		this.userRepository = userRepository;
 	}
 
-	public List<User> getUsers() {
-		return this.userRepository.findAll();
-	}
+
+
+
+	// Basic Auth Functions first; register, login, logout, check token
 
 	public User createUser(User newUser) {
+		checkIfUserExists(newUser);
+
 		newUser.setToken(UUID.randomUUID().toString());
 		newUser.setStatus(UserStatus.ONLINE);
 		newUser.setCreationDate(LocalDateTime.now());
-		checkIfUserExists(newUser);
+		newUser.setPassword(hashPassword(newUser.getPassword()));
+		newUser.setStyle("bottts-neutral");
+		newUser.setSeed(newUser.getUsername());
 
-		// saves the given entity but data is only persisted in the database once
-		// flush() is called
-		newUser = userRepository.save(newUser);
+		newUser = userRepository.save(newUser); // saves the given entity but data is only persisted in the database
+												// once flush() is called
 		userRepository.flush();
-
 		log.debug("Created Information for User: {}", newUser);
 		return newUser;
 	}
 
-	/**
-	 * This is a helper method that will check the uniqueness criteria of the
-	 * username and the name
-	 * defined in the User entity. The method will do nothing if the input is unique
-	 * and throw an error otherwise.
-	 *
-	 * @param userToBeCreated
-	 * @throws org.springframework.web.server.ResponseStatusException
-	 * @see User
-	 */
 	private void checkIfUserExists(User userToBeCreated) {
 		User userByUsername = userRepository.findByUsername(userToBeCreated.getUsername());
-
 		if (userByUsername != null) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "The username provided is not unique. Therefore, the user could not be created!");
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"The username provided is not unique. Therefore, the user could not be created!");
 		}
 	}
 
-	/**
-	 * This is a method that let's the user update their password and then logs them out of the platform.
-	 */
-	public void updateUser(User updatingUser, String newPassword) {
-		updatingUser.setPassword(newPassword);
-		updatingUser.setStatus(UserStatus.OFFLINE);
-		updatingUser = userRepository.save(updatingUser);
-		userRepository.flush();
-	
-		log.debug("Update Password for User: {}", updatingUser);
-		// return updatingUser;
-	}
-	/**
-	 * This is a method logs the user into the platform.
-	 */
-	public void loginUser(String username, String password) {
-		User loginUser = getUserByUsername(username);
-		if (loginUser.getPassword().equals(password)) {
-			loginUser.setStatus(UserStatus.ONLINE);
-			loginUser = userRepository.save(loginUser);
-			userRepository.flush();
-		
-			log.debug("Logging User in: {}", loginUser);
-		}
-		else {
-			log.debug("Given password is wrong: {}", loginUser.getId());
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-					String.format("The User gave wrong password: %s.", password));		
-		}
-	}
-	
-	/**
-	 * This is a method logs the user out of the platform.
-	 */
-	public void logoutUser(User logoutUser) {
-		logoutUser.setStatus(UserStatus.OFFLINE);
-		logoutUser = userRepository.save(logoutUser);
-		userRepository.flush();
-	
-		log.debug("Logging User out: {}", logoutUser);
+	private String hashPassword(String password) {
+		return passwordEncoder.encode(password);
 	}
 
-	/**
-	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
-	 */
-	public User getUserById(Long userId) {
-		Optional<User> requestedUser = userRepository.findById(userId);
+	public User loginUser(User userLoginData) {
+		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
 
-		if (!requestedUser.isPresent()) {
-			log.debug("User with ID could not be found by ID and 404 called: {}", userId, requestedUser);
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with the ID %s could not be found.", userId));
-		} else {
-			log.debug("User found by ID and returned: {}", requestedUser);	
-			User confirmedUser = requestedUser.get();
-			return confirmedUser;
+		if (userDBEntry == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or incomplete login request");
 		}
-	}
-	/**
-	 * This is a method that searches for the user by its unique ID and that throws a 404 if the user can't be found.
-	 */
-	public User getUserByUsername(String username) {
-		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
-		//So I don't question that premade desicion. 
-		User requestedUser = userRepository.findByUsername(username); 
 
-		if (requestedUser == null) {
-			log.debug("User with username could not be found by username and 404 called: {}", username);
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with the username %s could not be found.", username));
-		} else {
-			log.debug("User found by username and returned: {}", requestedUser);	
-			return requestedUser;
+		if (!passwordEncoder.matches(userLoginData.getPassword(), userDBEntry.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
 		}
+
+		userDBEntry.setStatus(UserStatus.ONLINE);
+		userDBEntry.setToken(UUID.randomUUID().toString());
+
+		return userDBEntry;
 	}
+
+	public void logoutUser(User user) {
+		user.setToken(null);
+		user.setStatus(UserStatus.OFFLINE);
+	}
+
+	public User checkToken(String authorizationHeader) {
+		if (authorizationHeader == null || authorizationHeader.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
+		}
+
+		final String prefix = "Bearer "; // erwartet: "Bearer <token>"
+		if (!authorizationHeader.startsWith(prefix)) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization header");
+		}
+
+		String token = authorizationHeader.substring(prefix.length()).trim();
+		if (token.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+		}
+
+		User user = userRepository.findByToken(token)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+
+		if (user.getStatus() != UserStatus.ONLINE) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not online");
+		}
+
+		return user;
+	}
+
+
+
+	// Next: user related services that are offered
+
+	public List<User> getUsers() {
+		return this.userRepository.findAll();
+	}
+
+
+	public User getUserById(Long id) {
+		return userRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+	}
+
 	public User getUserByToken(String token) {
-		//I use User and not Optional<User> here, because in the UserRepository.java there this method is designed to give back type User. 
-		//So I don't question that premade desicion. 
-		User requestedUser = userRepository.findByToken(token); 
-
-		if (requestedUser == null) {
-			log.debug("User with username could not be found by token and 404 called");
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					String.format("The User with this token could not be found."));
-		} else {
-			log.debug("User found by token and returned: {}", requestedUser);	
-			return requestedUser;
-		}
+    return userRepository.findByToken(token)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
 	}
+
+	public User changeUserInformation(User requestingUser, User userInput) {
+
+		if (userInput.getUsername() != null) {
+			checkIfUserExists(userInput);
+			requestingUser.setUsername(userInput.getUsername());
+		}
+
+		if (userInput.getBio() != null) {
+			requestingUser.setBio(userInput.getBio());
+		}
+
+		if (userInput.getPassword() != null) {
+			requestingUser.setPassword(hashPassword(userInput.getPassword()));
+		}
+
+		return requestingUser;
+	}
+
+	public void deleteUserProfile(User user, String password) {
+		if (!passwordEncoder.matches(password, user.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
+		}
+		userRepository.delete(user);
+		userRepository.flush();
+	}
+
+	public User changeUserAvatar(User requestingUser, User userInput) {
+
+		if (userInput.getStyle() != null) {
+			requestingUser.setStyle(userInput.getStyle());
+		}
+
+		if (userInput.getSeed() != null) {
+			requestingUser.setSeed(userInput.getSeed());
+		}
+
+		return requestingUser;
+	}
+
 }
