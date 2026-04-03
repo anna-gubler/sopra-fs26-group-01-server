@@ -23,7 +23,6 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -84,13 +83,9 @@ public class UserControllerTest {
 	// mock User authentication
 	private void mockUserAuthentication(User user, boolean success) {
 		if (success) {
-			given(userService.checkToken(nullable(String.class)))
-					.willReturn(user);
-
-		} else {
-			given(userService.checkToken(nullable(String.class)))
-					.willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header"));
+			given(userService.getUserByToken(any())).willReturn(user);
 		}
+		// failure case: no Authorization header → interceptor throws 401, no mocking needed
 	}
 
 	@Test
@@ -212,6 +207,7 @@ public class UserControllerTest {
 		mockUserAuthentication(logoutUser, true);
 
 		MockHttpServletRequestBuilder postRequest = post("/auth/logout")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON);
 
 		mockMvc.perform(postRequest)
@@ -237,6 +233,7 @@ public class UserControllerTest {
 		mockUserAuthentication(user, true);
 
 		MockHttpServletRequestBuilder getRequest = get("/users/me")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON);
 
 		mockMvc.perform(getRequest)
@@ -265,7 +262,7 @@ public class UserControllerTest {
 		updatedUser.setStatus(UserStatus.ONLINE);
 
 		// mocks
-		given(userService.checkToken(any())).willReturn(authUser);
+		mockUserAuthentication(authUser, true);
 		given(userService.changeUserInformation(any(User.class), any(User.class))).willReturn(updatedUser);
 
 		// request
@@ -302,6 +299,7 @@ public class UserControllerTest {
 						HttpStatus.CONFLICT, "Username already exists"));
 
 		MockHttpServletRequestBuilder patchRequest = patch("/users/me")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(asJsonString(new UserPatchDTO()));
 
@@ -314,6 +312,7 @@ public class UserControllerTest {
 		mockUserAuthentication(newUser(), true);
 
 		MockHttpServletRequestBuilder deleteRequest = delete("/users/me")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(PASSWORD);
 
@@ -329,6 +328,7 @@ public class UserControllerTest {
 				.given(userService).deleteUserProfile(any(User.class), eq(PASSWORD));
 
 		MockHttpServletRequestBuilder deleteRequest = delete("/users/me")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(PASSWORD);
 
@@ -427,6 +427,7 @@ public class UserControllerTest {
 		given(userService.changeUserAvatar(any(User.class), any(User.class))).willReturn(newUser());
 
 		MockHttpServletRequestBuilder putRequest = put("/users/me/avatar")
+				.header("Authorization", "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(asJsonString(new UserPutAvatarDTO()));
 

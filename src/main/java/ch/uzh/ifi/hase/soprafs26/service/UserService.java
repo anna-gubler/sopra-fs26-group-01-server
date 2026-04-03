@@ -88,30 +88,6 @@ public class UserService {
 		user.setStatus(UserStatus.OFFLINE);
 	}
 
-	public User checkToken(String authorizationHeader) {
-		if (authorizationHeader == null || authorizationHeader.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
-		}
-
-		final String prefix = "Bearer "; // erwartet: "Bearer <token>"
-		if (!authorizationHeader.startsWith(prefix)) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization header");
-		}
-
-		String token = authorizationHeader.substring(prefix.length()).trim();
-		if (token.isEmpty()) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
-		}
-
-		User user = userRepository.findByToken(token)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
-
-		if (user.getStatus() != UserStatus.ONLINE) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not online");
-		}
-
-		return user;
-	}
 
 
 
@@ -133,8 +109,14 @@ public class UserService {
 	}
 
 	public User getUserByToken(String token) {
-    return userRepository.findByToken(token)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+		User user = userRepository.findByToken(token)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+
+		if (user.getStatus() != UserStatus.ONLINE) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not online");
+		}
+
+		return user;
 	}
 
 	public User changeUserInformation(User requestingUser, User userInput) {

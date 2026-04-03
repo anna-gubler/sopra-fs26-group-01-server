@@ -137,41 +137,31 @@ public class UserServiceTest {
 	}
 
 
-	// --- checkToken ---
+	// --- getUserByToken ---
 
 	@Test
-	public void checkToken_validToken_returnsUser() {
+	public void getUserByToken_validToken_returnsUser() {
 		Mockito.when(userRepository.findByToken(TEST_TOKEN)).thenReturn(Optional.of(buildPersistedUser()));
 
-		User result = userService.checkToken("Bearer " + TEST_TOKEN);
+		User result = userService.getUserByToken(TEST_TOKEN);
 
 		assertEquals(TEST_ID, result.getId());
 	}
 
 	@Test
-	public void checkToken_nullHeader_throwsException() {
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken(null));
-	}
-
-	@Test
-	public void checkToken_missingBearerPrefix_throwsException() {
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken(TEST_TOKEN));
-	}
-
-	@Test
-	public void checkToken_tokenNotFound_throwsException() {
+	public void getUserByToken_tokenNotFound_throwsException() {
 		Mockito.when(userRepository.findByToken(Mockito.any())).thenReturn(Optional.empty());
 
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken("Bearer invalid-token"));
+		assertThrows(ResponseStatusException.class, () -> userService.getUserByToken("invalid-token"));
 	}
 
 	@Test
-	public void checkToken_userOffline_throwsException() {
+	public void getUserByToken_userOffline_throwsException() {
 		User offlineUser = buildPersistedUser();
 		offlineUser.setStatus(UserStatus.OFFLINE);
 		Mockito.when(userRepository.findByToken(TEST_TOKEN)).thenReturn(Optional.of(offlineUser));
 
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken("Bearer " + TEST_TOKEN));
+		assertThrows(ResponseStatusException.class, () -> userService.getUserByToken(TEST_TOKEN));
 	}
 
 

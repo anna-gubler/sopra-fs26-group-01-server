@@ -71,6 +71,10 @@ jacocoTestReport {
     }
 }
 
+compileJava {
+    options.compilerArgs << '-parameters'
+}
+
 test {
     useJUnitPlatform()
     testLogging.showStandardStreams = true

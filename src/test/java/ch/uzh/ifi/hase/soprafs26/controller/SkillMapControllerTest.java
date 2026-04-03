@@ -8,6 +8,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.SkillMapService;
+import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class SkillMapControllerTest {
 
     @MockitoBean
     private SkillMapService skillMapService;
+
+    @MockitoBean
+    private UserService userService;
 
     private static final String TOKEN = "Bearer test-token";
 

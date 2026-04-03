@@ -18,9 +18,8 @@ import jakarta.validation.Valid;
  * the user.
  * The controller will receive the request and delegate the execution to the
  * UserService and finally return the result.
- * 
- * Authorization works over RequestHeader. Required is set to false so we can control the error and 
- * throw 401 unauthorized with checkToken() instead of standard 400 bad request (for wrong header).
+ *
+ * Authorization is handled by AuthInterceptor for all protected endpoints.
  */
 @RestController
 public class UserController {
@@ -55,24 +54,27 @@ public class UserController {
 
 	@PostMapping("/auth/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void logout(@RequestHeader(value = "Authorization", required = false) String auth) {
-		User user = userService.checkToken(auth);
+	public void logout(@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User user = userService.getUserByToken(token);
 		userService.logoutUser(user);
 	}
 
 	@GetMapping("/users/me")
 	@ResponseStatus(HttpStatus.OK)
-	public UserGetDTO getUser(@RequestHeader(value = "Authorization", required = false) String auth) {
-		User user = userService.checkToken(auth);
+	public UserGetDTO getUser(@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User user = userService.getUserByToken(token);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
 	}
-	
+
 	@PatchMapping("/users/me")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
 	public UserGetDTO changeUserProfile(@RequestBody UserPatchDTO dto,
-			@RequestHeader(value = "Authorization", required = false) String auth) {
-		User requestingUser = userService.checkToken(auth);
+			@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User requestingUser = userService.getUserByToken(token);
 		User userInput = DTOMapper.INSTANCE.convertUserPatchDTOtoEntity(dto);
 		User changedUser = userService.changeUserInformation(requestingUser, userInput);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
@@ -81,26 +83,26 @@ public class UserController {
 	@DeleteMapping("/users/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@ResponseBody
-	public void deleteUserProfile(@RequestHeader(value = "Authorization", required = false) String auth, @RequestBody String password) {
-		User user = userService.checkToken(auth);
+	public void deleteUserProfile(@RequestHeader("Authorization") String authHeader, @RequestBody String password) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User user = userService.getUserByToken(token);
 		userService.deleteUserProfile(user, password);
 	}
 
 	@GetMapping("/users/{id}")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public UserGetDTO getUserById(@PathVariable("id") Long id,
-			@RequestHeader(value = "Authorization", required = false) String auth) {
-		userService.checkToken(auth);
-		User RequestedUser = userService.getUserById(id);
-		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(RequestedUser);
+	public UserGetDTO getUserById(@PathVariable Long id) {
+		User requestedUser = userService.getUserById(id);
+		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(requestedUser);
 	}
 
 	@PutMapping("/users/me/avatar")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public UserGetDTO changeUserAvatar(@RequestBody UserPutAvatarDTO dto, @RequestHeader(value = "Authorization", required = false) String auth) {
-		User requestingUser = userService.checkToken(auth);
+	public UserGetDTO changeUserAvatar(@RequestBody UserPutAvatarDTO dto, @RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User requestingUser = userService.getUserByToken(token);
 		User userInput = DTOMapper.INSTANCE.convertUserPutAvatarDTOtoEntity(dto);
 		User changedUser = userService.changeUserAvatar(requestingUser, userInput);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
