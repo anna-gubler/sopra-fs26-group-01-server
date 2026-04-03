@@ -129,7 +129,7 @@ public class UserServiceIntegrationTest {
 
 		userService.deleteUserProfile(createdUser, RAW_PASSWORD);
 
-		assertNull(userRepository.findByUsername(TEST_USERNAME));
+		assertFalse(userRepository.findByUsername(TEST_USERNAME).isPresent());
 		assertFalse(userRepository.findById(id).isPresent());
 	}
 

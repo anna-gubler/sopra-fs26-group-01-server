@@ -60,11 +60,9 @@ public class UserService {
 	}
 
 	private void checkIfUserExists(User userToBeCreated) {
-		User userByUsername = userRepository.findByUsername(userToBeCreated.getUsername());
-		if (userByUsername != null) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"The username provided is not unique. Therefore, the user could not be created!");
-		}
+		userRepository.findByUsername(userToBeCreated.getUsername())
+				.ifPresent(u -> { throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"The username provided is not unique. Therefore, the user could not be created!"); });
 	}
 
 	private String hashPassword(String password) {
@@ -72,11 +70,8 @@ public class UserService {
 	}
 
 	public User loginUser(User userLoginData) {
-		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername());
-
-		if (userDBEntry == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or incomplete login request");
-		}
+		User userDBEntry = userRepository.findByUsername(userLoginData.getUsername())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or incomplete login request"));
 
 		if (!passwordEncoder.matches(userLoginData.getPassword(), userDBEntry.getPassword())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
@@ -129,6 +124,11 @@ public class UserService {
 
 	public User getUserById(Long id) {
 		return userRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+	}
+
+	public User getUserByUsername(String username) {
+		return userRepository.findByUsername(username)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 	}
 

@@ -12,9 +12,6 @@ import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutAvatarDTO;
 import jakarta.validation.Valid;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * User Controller
  * This class is responsible for handling all REST request that are related to
@@ -97,24 +94,6 @@ public class UserController {
 		userService.checkToken(auth);
 		User RequestedUser = userService.getUserById(id);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(RequestedUser);
-	}
-
-
-	@GetMapping("/users")
-	@ResponseStatus(HttpStatus.OK)
-	@ResponseBody
-	public List<UserGetDTO> getAllUsers(@RequestHeader(value = "Authorization", required = false) String auth) {
-		userService.checkToken(auth);
-
-		// fetch all users in the internal representation
-		List<User> users = userService.getUsers();
-		List<UserGetDTO> userGetDTOs = new ArrayList<>();
-
-		// convert each user to the API representation
-		for (User user : users) {
-			userGetDTOs.add(DTOMapper.INSTANCE.convertEntityToUserGetDTO(user));
-		}
-		return userGetDTOs;
 	}
 
 	@PutMapping("/users/me/avatar")

@@ -88,7 +88,7 @@ public class UserServiceTest {
 	public void createUser_duplicateUsername_throwsException() {
 		User input = buildNewUser();
 
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		assertThrows(ResponseStatusException.class, () -> userService.createUser(input));
 	}
@@ -98,7 +98,7 @@ public class UserServiceTest {
 
 	@Test
 	public void loginUser_validCredentials_success() {
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		User result = userService.loginUser(buildNewUser());
 
@@ -108,14 +108,14 @@ public class UserServiceTest {
 
 	@Test
 	public void loginUser_userNotFound_throwsException() {
-		Mockito.when(userRepository.findByUsername(Mockito.any())).thenReturn(null);
+		Mockito.when(userRepository.findByUsername(Mockito.any())).thenReturn(Optional.empty());
 
 		assertThrows(ResponseStatusException.class, () -> userService.loginUser(buildNewUser()));
 	}
 
 	@Test
 	public void loginUser_wrongPassword_throwsException() {
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		User loginInput = new User();
 		loginInput.setPassword("wrongPassword");
@@ -204,7 +204,7 @@ public class UserServiceTest {
 		User input = new User();
 		input.setUsername("newUsername");
 
-		Mockito.when(userRepository.findByUsername("newUsername")).thenReturn(null);
+		Mockito.when(userRepository.findByUsername("newUsername")).thenReturn(Optional.empty());
 
 		User result = userService.changeUserInformation(requestingUser, input);
 
@@ -218,7 +218,7 @@ public class UserServiceTest {
 		User input = new User();
 		input.setUsername("takenUsername");
 
-		Mockito.when(userRepository.findByUsername("takenUsername")).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername("takenUsername")).thenReturn(Optional.of(buildPersistedUser()));
 
 		assertThrows(ResponseStatusException.class, () -> userService.changeUserInformation(requestingUser, input));
 	}

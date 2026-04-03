@@ -403,56 +403,6 @@ public class UserControllerTest {
 				.andExpect(status().isNotFound());
 	}
 
-	/*
-	 * The following tests are for getUsers (List), and Endpoint from M1 that we
-	 * dont have in specs. I'll leave them for now
-	 * Would also require the following static imports:
-	 * import java.util.Collections;
-	 * import java.util.List;
-	 * import static org.hamcrest.Matchers.hasSize;
-	 * 
-	 * @Test
-	 * public void givenAuthenticatedUser_whenGetUsers_thenReturnUserList() throws
-	 * Exception {
-	 * // Define desired server response
-	 * User user = newUser();
-	 * List<User> allUsers = Collections.singletonList(user);
-	 * 
-	 * // this mocks the UserService, meaning "it would return this if it were used"
-	 * given(userService.getUsers()).willReturn(allUsers);
-	 * mockUserAuthentication(user, true);
-	 * 
-	 * // Define HTTP request
-	 * MockHttpServletRequestBuilder getRequest = get("/users")
-	 * .header("Authorization", "Bearer test-token")
-	 * .contentType(MediaType.APPLICATION_JSON);
-	 * 
-	 * // then do requests
-	 * mockMvc.perform(getRequest)
-	 * .andExpect(status().isOk())
-	 * .andExpect(jsonPath("$", hasSize(1)))
-	 * .andExpect(jsonPath("$[0].username", is(user.getUsername())))
-	 * .andExpect(jsonPath("$[0].bio", is(user.getBio())))
-	 * .andExpect(jsonPath("$[0].token").doesNotExist())
-	 * .andExpect(jsonPath("$[0].status", is(user.getStatus().toString())));
-	 * }
-	 * 
-	 * @Test
-	 * public void givenNoAuthorization_whenGetUsers_thenReturnUnauthorized() throws
-	 * Exception {
-	 * // Mock
-	 * mockUserAuthentication(newUser(), false);
-	 * 
-	 * // Define HTTP request
-	 * MockHttpServletRequestBuilder getRequest = get("/users")
-	 * .contentType(MediaType.APPLICATION_JSON);
-	 * 
-	 * // then do requests
-	 * mockMvc.perform(getRequest)
-	 * .andExpect(status().isUnauthorized());
-	 * }
-	 */
-
 	/**
 	 * Helper Method to convert userPostDTO into a JSON string such that the input
 	 * can be processed
