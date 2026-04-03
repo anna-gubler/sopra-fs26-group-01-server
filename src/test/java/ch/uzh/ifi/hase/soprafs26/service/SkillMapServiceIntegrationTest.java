@@ -34,6 +34,9 @@ class SkillMapServiceIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+    
     private User owner;
 
     @BeforeEach
@@ -57,7 +60,7 @@ class SkillMapServiceIntegrationTest {
         input.setIsPublic(true);
         input.setNumberOfLevels(3);
 
-        SkillMap result = skillMapService.createSkillMap(input, "Bearer owner-token");
+        SkillMap result = skillMapService.createSkillMap(input, "owner-token");
 
         // map is persisted
         assertNotNull(result.getId());
@@ -75,10 +78,10 @@ class SkillMapServiceIntegrationTest {
         input.setTitle("To Delete");
         input.setIsPublic(true);
         input.setNumberOfLevels(2);
-        SkillMap saved = skillMapService.createSkillMap(input, "Bearer owner-token");
+        SkillMap saved = skillMapService.createSkillMap(input, "owner-token");
         Long mapId = saved.getId();
 
-        skillMapService.deleteSkillMap(mapId, "Bearer owner-token");
+        skillMapService.deleteSkillMap(mapId, "owner-token");
 
         assertFalse(skillMapRepository.findById(mapId).isPresent());
         assertTrue(skillMapMembershipRepository.findBySkillMapId(mapId).isEmpty());
@@ -91,22 +94,16 @@ class SkillMapServiceIntegrationTest {
         input.setTitle("Joinable Map");
         input.setIsPublic(true);
         input.setNumberOfLevels(2);
-        SkillMap saved = skillMapService.createSkillMap(input, "Bearer owner-token");
+        SkillMap saved = skillMapService.createSkillMap(input, owner.getToken());
 
         // create a second user
-        User student = new User();
-        student.setUsername("student");
-        student.setPassword("password");
-        student.setToken("student-token");
-        student.setStatus(UserStatus.ONLINE);   
-        student.setSeed("seed456");             
-        student.setStyle("avataaars");          
-        student.setCreationDate(LocalDateTime.now()); 
-        userRepository.save(student);
-        userRepository.flush();
+        User newStudent = new User();
+        newStudent.setUsername("student");
+        newStudent.setPassword("password");
+        User student = userService.createUser(newStudent);
 
         SkillMapMembership membership = skillMapService.joinSkillMap(
-                saved.getId(), saved.getInviteCode(), "Bearer student-token");
+                saved.getId(), saved.getInviteCode(), student.getToken());
 
         assertNotNull(membership.getId());
         assertEquals(SkillMapRole.STUDENT, membership.getRole());

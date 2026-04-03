@@ -74,7 +74,7 @@ class SkillMapServiceTest {
 
     @Test
     void getSkillMaps_validToken_returnsMemberMaps() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapMembershipRepository.findByUserId(owner.getId()))
                 .willReturn(List.of(ownerMembership));
         given(skillMapRepository.findAllById(List.of(skillMap.getId())))
@@ -88,7 +88,7 @@ class SkillMapServiceTest {
 
     @Test
     void getSkillMaps_noMemberships_returnsEmptyList() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapMembershipRepository.findByUserId(owner.getId()))
                 .willReturn(List.of());
         given(skillMapRepository.findAllById(List.of()))
@@ -103,7 +103,7 @@ class SkillMapServiceTest {
 
     @Test
     void createSkillMap_validInput_returnsCreatedMap() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
         given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
 
@@ -121,7 +121,7 @@ class SkillMapServiceTest {
 
     @Test
     void createSkillMap_missingTitle_throws400() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
 
         SkillMap input = new SkillMap();
         input.setIsPublic(true);
@@ -134,7 +134,7 @@ class SkillMapServiceTest {
 
     @Test
     void createSkillMap_missingIsPublic_throws400() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
 
         SkillMap input = new SkillMap();
         input.setTitle("Test Map");
@@ -147,7 +147,7 @@ class SkillMapServiceTest {
 
     @Test
     void createSkillMap_invalidNumberOfLevels_throws400() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
 
         SkillMap input = new SkillMap();
         input.setTitle("Test Map");
@@ -163,7 +163,7 @@ class SkillMapServiceTest {
 
     @Test
     void getSkillMapById_publicMap_anyUser_returnsMap() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
@@ -176,7 +176,7 @@ class SkillMapServiceTest {
     @Test
     void getSkillMapById_privateMap_member_returnsMap() {
         skillMap.setIsPublic(false);
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(true);
@@ -189,7 +189,7 @@ class SkillMapServiceTest {
     @Test
     void getSkillMapById_privateMap_nonMember_throws403() {
         skillMap.setIsPublic(false);
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
@@ -201,7 +201,7 @@ class SkillMapServiceTest {
 
     @Test
     void getSkillMapById_notFound_throws404() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -213,7 +213,7 @@ class SkillMapServiceTest {
 
     @Test
     void updateSkillMap_validInput_returnsUpdatedMap() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
                 .willReturn(true);
@@ -229,7 +229,7 @@ class SkillMapServiceTest {
 
     @Test
     void updateSkillMap_notOwner_throws403() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(true);
@@ -244,7 +244,7 @@ class SkillMapServiceTest {
 
     @Test
     void updateSkillMap_blankTitle_throws400() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
                 .willReturn(true);
@@ -261,7 +261,7 @@ class SkillMapServiceTest {
 
     @Test
     void deleteSkillMap_owner_deletesSuccessfully() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.findBySkillMapId(10L))
                 .willReturn(List.of(ownerMembership));
@@ -274,7 +274,7 @@ class SkillMapServiceTest {
 
     @Test
     void deleteSkillMap_notOwner_throws403() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -285,7 +285,7 @@ class SkillMapServiceTest {
 
     @Test
     void deleteSkillMap_notFound_throws404() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -297,7 +297,7 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_validInviteCode_createsMembership() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
@@ -317,7 +317,7 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_wrongInviteCode_throws403() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -327,7 +327,7 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_alreadyMember_throws409() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(true);
@@ -339,7 +339,7 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_mapNotFound_throws404() {
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -351,7 +351,7 @@ class SkillMapServiceTest {
 
     @Test
     void getMembers_validRequest_returnsMemberList() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
                 .willReturn(true);
@@ -375,7 +375,7 @@ class SkillMapServiceTest {
         otherMembership.setSkillMapId(10L);
         otherMembership.setRole(SkillMapRole.STUDENT);
 
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.findBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(Optional.of(otherMembership));
@@ -392,7 +392,7 @@ class SkillMapServiceTest {
         otherMembership.setSkillMapId(10L);
         otherMembership.setRole(SkillMapRole.STUDENT);
 
-        given(userService.checkToken("other-token")).willReturn(otherUser);
+        given(userService.getUserByToken("other-token")).willReturn(otherUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.findBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(Optional.of(otherMembership));
@@ -412,7 +412,7 @@ class SkillMapServiceTest {
         otherMembership.setUserId(otherUser.getId());
         otherMembership.setSkillMapId(10L);
 
-        given(userService.checkToken("third-token")).willReturn(thirdUser);
+        given(userService.getUserByToken("third-token")).willReturn(thirdUser);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.findBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(Optional.of(otherMembership));
@@ -425,7 +425,7 @@ class SkillMapServiceTest {
 
     @Test
     void removeMember_membershipNotFound_throws404() {
-        given(userService.checkToken("owner-token")).willReturn(owner);
+        given(userService.getUserByToken("owner-token")).willReturn(owner);
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.findBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(Optional.empty());

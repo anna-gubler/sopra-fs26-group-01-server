@@ -2,7 +2,9 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.service.SkillService;
+import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.server.ResponseStatusException;
+
+
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -24,6 +28,8 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
+import ch.uzh.ifi.hase.soprafs26.entity.User;
 
 @WebMvcTest(SkillController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -35,6 +41,15 @@ class SkillControllerTest {
     @MockitoBean
     private SkillService skillService;
     
+    @MockitoBean
+    private UserService userService;
+    
+    @BeforeEach
+    void setupMocks() {
+        User dummyUser = new User();
+        dummyUser.setId(1L);
+        given(userService.getUserByToken(any())).willReturn(dummyUser);}
+
     private Skill buildSkill(Long id, String name, int level) {
         Skill s = new Skill();
         s.setId(id);
@@ -54,6 +69,7 @@ class SkillControllerTest {
                 .willReturn(List.of(s1, s2));
 
         MockHttpServletRequestBuilder request = get("/skillmaps/10/skills")
+                .header("Authorization", "Bearer valid-token")
                 .header("token", "valid-token")
                 .accept(MediaType.APPLICATION_JSON);
 
@@ -70,6 +86,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized"));
 
         mockMvc.perform(get("/skillmaps/10/skills")
+                        .header("Authorization", "Bearer terrifying-bad-token")
                         .header("token", "terrifying-bad-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
@@ -81,6 +98,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
         mockMvc.perform(get("/skillmaps/99/skills")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
@@ -103,6 +121,7 @@ class SkillControllerTest {
                 """;
 
         mockMvc.perform(post("/skillmaps/10/skills")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
@@ -121,6 +140,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner"));
 
         mockMvc.perform(post("/skillmaps/10/skills")
+                        .header("Authorization", "Bearer other-token")
                         .header("token", "other-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\", \"level\": 1 }"))
@@ -136,6 +156,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
         mockMvc.perform(post("/skillmaps/99/skills")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\", \"level\": 1 }"))
@@ -151,6 +172,7 @@ class SkillControllerTest {
         given(skillService.getSkillById(5L, "valid-token")).willReturn(skill);
 
         mockMvc.perform(get("/skills/5")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -164,6 +186,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
         mockMvc.perform(get("/skills/99")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
@@ -186,6 +209,7 @@ class SkillControllerTest {
                 """;
 
         mockMvc.perform(patch("/skills/5")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
@@ -202,6 +226,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner"));
 
         mockMvc.perform(patch("/skills/5")
+                        .header("Authorization", "Bearer other-token")
                         .header("token", "other-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\" }"))
@@ -217,6 +242,7 @@ class SkillControllerTest {
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
         mockMvc.perform(patch("/skills/99")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\" }"))
@@ -230,6 +256,7 @@ class SkillControllerTest {
         doNothing().when(skillService).deleteSkill(5L, "valid-token");
 
         mockMvc.perform(delete("/skills/5")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token"))
                 .andExpect(status().isNoContent());
     }
@@ -240,6 +267,7 @@ class SkillControllerTest {
                 .when(skillService).deleteSkill(5L, "other-token");
 
         mockMvc.perform(delete("/skills/5")
+                        .header("Authorization", "Bearer other-token")
                         .header("token", "other-token"))
                 .andExpect(status().isForbidden());
     }
@@ -250,6 +278,7 @@ class SkillControllerTest {
                 .when(skillService).deleteSkill(99L, "valid-token");
 
         mockMvc.perform(delete("/skills/99")
+                        .header("Authorization", "Bearer valid-token")
                         .header("token", "valid-token"))
                 .andExpect(status().isNotFound());
     }
