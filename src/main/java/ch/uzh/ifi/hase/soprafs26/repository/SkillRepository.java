@@ -10,6 +10,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.*;
 @Repository
 public interface SkillRepository extends JpaRepository<Skill, Long> {
     // List<Skill> findByMapId(Long mapId);
-    List<Skill> findByMapIdAndLevel(Long mapId, Integer level);
+    // List<Skill> findByMapIdAndLevel(Long mapId, Integer level);
+    List<Skill> findBySkillMapAndLevel(SkillMap skillMap, Integer level);
     List<Skill> findBySkillMap(SkillMap skillMap);
 }

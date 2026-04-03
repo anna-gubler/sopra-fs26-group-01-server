@@ -23,11 +23,12 @@ public class SkillService {
     private final UserRepository userRepository;
     private final SkillMapMembershipRepository skillMapMembershipRepository;
 
-    public SkillService(SkillRepository skillRepository, SkillMapRepository skillMapRepository) {
+    public SkillService(SkillRepository skillRepository, SkillMapRepository skillMapRepository,
+                        UserRepository userRepository, SkillMapMembershipRepository skillMapMembershipRepository) {
         this.skillRepository = skillRepository;
         this.skillMapRepository = skillMapRepository;
-        this.userRepository = null;
-        this.skillMapMembershipRepository = null;
+        this.userRepository = userRepository;
+        this.skillMapMembershipRepository = skillMapMembershipRepository;
     }
 
     // #52 - POST
