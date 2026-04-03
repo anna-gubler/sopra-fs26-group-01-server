@@ -20,7 +20,10 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 
 @Service
 @Transactional
@@ -30,14 +33,17 @@ public class SkillMapService {
     private final SkillMapRepository skillMapRepository;
     private final SkillMapMembershipRepository skillMapMembershipRepository;
     private final UserService userService;
+    private final SkillRepository skillRepository;
 
     public SkillMapService(
             @Qualifier("skillMapRepository") SkillMapRepository skillMapRepository,
+            @Qualifier("skillRepository") SkillRepository skillRepository,
             @Qualifier("skillMapMembershipRepository") SkillMapMembershipRepository skillMapMembershipRepository,
             UserService userService) {
         this.skillMapRepository = skillMapRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
         this.userService = userService;
+        this.skillRepository = skillRepository;
     }
 
     // 201 - returns only maps the requester is a member of (spec 201.1)
@@ -224,9 +230,22 @@ public class SkillMapService {
     // 209 - stub: returns skillmap metadata; skills/deps/progress added once those entities exist
     public SkillMapGraphDTO getSkillMapGraph(Long skillMapId, String token) {
         SkillMap map = getSkillMapById(skillMapId, token);
+        
+        List<SkillGetDTO> skillDTOs = skillRepository.findBySkillMap(map)
+                .stream()
+                .map(DTOMapper.INSTANCE::convertEntityToSkillGetDTO)
+                .collect(Collectors.toList());
+        
+        //TODO: add dependencies as soon as this entity exists
+
+
+        //TODO: add progress as soon as this entity exists
+
+
         SkillMapGraphDTO graph = new SkillMapGraphDTO();
         graph.setSkillMapId(map.getId());
         graph.setTitle(map.getTitle());
+        graph.setSkills(skillDTOs);
         return graph;
     }
 
