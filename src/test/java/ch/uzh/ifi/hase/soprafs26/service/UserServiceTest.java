@@ -88,7 +88,7 @@ public class UserServiceTest {
 	public void createUser_duplicateUsername_throwsException() {
 		User input = buildNewUser();
 
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		assertThrows(ResponseStatusException.class, () -> userService.createUser(input));
 	}
@@ -98,7 +98,7 @@ public class UserServiceTest {
 
 	@Test
 	public void loginUser_validCredentials_success() {
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		User result = userService.loginUser(buildNewUser());
 
@@ -108,14 +108,14 @@ public class UserServiceTest {
 
 	@Test
 	public void loginUser_userNotFound_throwsException() {
-		Mockito.when(userRepository.findByUsername(Mockito.any())).thenReturn(null);
+		Mockito.when(userRepository.findByUsername(Mockito.any())).thenReturn(Optional.empty());
 
 		assertThrows(ResponseStatusException.class, () -> userService.loginUser(buildNewUser()));
 	}
 
 	@Test
 	public void loginUser_wrongPassword_throwsException() {
-		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
 
 		User loginInput = new User();
 		loginInput.setPassword("wrongPassword");
@@ -137,41 +137,31 @@ public class UserServiceTest {
 	}
 
 
-	// --- checkToken ---
+	// --- getUserByToken ---
 
 	@Test
-	public void checkToken_validToken_returnsUser() {
+	public void getUserByToken_validToken_returnsUser() {
 		Mockito.when(userRepository.findByToken(TEST_TOKEN)).thenReturn(Optional.of(buildPersistedUser()));
 
-		User result = userService.checkToken("Bearer " + TEST_TOKEN);
+		User result = userService.getUserByToken(TEST_TOKEN);
 
 		assertEquals(TEST_ID, result.getId());
 	}
 
 	@Test
-	public void checkToken_nullHeader_throwsException() {
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken(null));
-	}
-
-	@Test
-	public void checkToken_missingBearerPrefix_throwsException() {
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken(TEST_TOKEN));
-	}
-
-	@Test
-	public void checkToken_tokenNotFound_throwsException() {
+	public void getUserByToken_tokenNotFound_throwsException() {
 		Mockito.when(userRepository.findByToken(Mockito.any())).thenReturn(Optional.empty());
 
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken("Bearer invalid-token"));
+		assertThrows(ResponseStatusException.class, () -> userService.getUserByToken("invalid-token"));
 	}
 
 	@Test
-	public void checkToken_userOffline_throwsException() {
+	public void getUserByToken_userOffline_throwsException() {
 		User offlineUser = buildPersistedUser();
 		offlineUser.setStatus(UserStatus.OFFLINE);
 		Mockito.when(userRepository.findByToken(TEST_TOKEN)).thenReturn(Optional.of(offlineUser));
 
-		assertThrows(ResponseStatusException.class, () -> userService.checkToken("Bearer " + TEST_TOKEN));
+		assertThrows(ResponseStatusException.class, () -> userService.getUserByToken(TEST_TOKEN));
 	}
 
 
@@ -204,7 +194,7 @@ public class UserServiceTest {
 		User input = new User();
 		input.setUsername("newUsername");
 
-		Mockito.when(userRepository.findByUsername("newUsername")).thenReturn(null);
+		Mockito.when(userRepository.findByUsername("newUsername")).thenReturn(Optional.empty());
 
 		User result = userService.changeUserInformation(requestingUser, input);
 
@@ -218,7 +208,7 @@ public class UserServiceTest {
 		User input = new User();
 		input.setUsername("takenUsername");
 
-		Mockito.when(userRepository.findByUsername("takenUsername")).thenReturn(buildPersistedUser());
+		Mockito.when(userRepository.findByUsername("takenUsername")).thenReturn(Optional.of(buildPersistedUser()));
 
 		assertThrows(ResponseStatusException.class, () -> userService.changeUserInformation(requestingUser, input));
 	}
