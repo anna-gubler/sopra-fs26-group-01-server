@@ -1,6 +1,7 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
+import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -15,27 +16,25 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
+import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 
-@WebAppConfiguration
 @SpringBootTest
-public class SkillMapServiceIntegrationTest {
+@Transactional
+class SkillMapServiceIntegrationTest {
 
-    @Qualifier("userRepository")
     @Autowired
-    private UserRepository userRepository;
+    private SkillMapService skillMapService;
 
-    @Qualifier("skillMapRepository")
     @Autowired
     private SkillMapRepository skillMapRepository;
 
-    @Qualifier("skillMapMembershipRepository")
     @Autowired
     private SkillMapMembershipRepository skillMapMembershipRepository;
-
     @Autowired
     private UserService userService;
 
@@ -48,7 +47,6 @@ public class SkillMapServiceIntegrationTest {
 
     @BeforeEach
     public void setup() {
-        // dependency order: memberships -> skillmaps -> users
         skillMapMembershipRepository.deleteAll();
         skillMapRepository.deleteAll();
         userRepository.deleteAll();
@@ -70,8 +68,40 @@ public class SkillMapServiceIntegrationTest {
         skillMap = skillMapService.createSkillMap(mapInput, owner.getToken());
     }
 
+    // createSkillMap
+    @Test
+    public void createSkillMap_persistedCorrectlyWithOwnerMembership() {
+        SkillMap input = new SkillMap();
+        input.setTitle("Integration Map");
+        input.setIsPublic(true);
+        input.setNumberOfLevels(3);
+
+        SkillMap result = skillMapService.createSkillMap(input, owner.getToken());
+
+        assertNotNull(result.getId());
+        assertEquals("Integration Map", result.getTitle());
+        assertTrue(skillMapRepository.findById(result.getId()).isPresent());
+        assertTrue(skillMapMembershipRepository
+                .existsBySkillMapIdAndUserId(result.getId(), owner.getId()));
+    }
+
+    // deleteSkillMap
+    @Test
+    public void deleteSkillMap_removedFromDatabaseWithMemberships() {
+        SkillMap input = new SkillMap();
+        input.setTitle("To Delete");
+        input.setIsPublic(true);
+        input.setNumberOfLevels(2);
+        SkillMap saved = skillMapService.createSkillMap(input, owner.getToken());
+        Long mapId = saved.getId();
+
+        skillMapService.deleteSkillMap(mapId, owner.getToken());
+
+        assertFalse(skillMapRepository.findById(mapId).isPresent());
+        assertTrue(skillMapMembershipRepository.findBySkillMapId(mapId).isEmpty());
+    }
+
     // joinSkillMap
-    // Test: valid invite code creates a membership with STUDENT role for the joining user
     @Test
     public void joinSkillMap_withValidInviteCode_createsMembershipWithStudentRole() {
         SkillMapMembership membership = skillMapService.joinSkillMap(
@@ -83,7 +113,6 @@ public class SkillMapServiceIntegrationTest {
         assertEquals(SkillMapRole.STUDENT, membership.getRole());
     }
 
-    // Test: after joining with a valid code, the skill map appears in the student's map list
     @Test
     public void joinSkillMap_withValidInviteCode_skillMapAppearsInStudentsMapList() {
         skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
@@ -94,7 +123,6 @@ public class SkillMapServiceIntegrationTest {
         assertEquals(skillMap.getId(), maps.get(0).getId());
     }
 
-    // Test: a wrong invite code is rejected with 403 Forbidden
     @Test
     public void joinSkillMap_withWrongInviteCode_throwsForbidden() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -103,7 +131,6 @@ public class SkillMapServiceIntegrationTest {
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
-    // Test: joining a map the user is already a member of is rejected with 409 Conflict
     @Test
     public void joinSkillMap_whenStudentAlreadyMember_throwsConflict() {
         skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
@@ -114,7 +141,6 @@ public class SkillMapServiceIntegrationTest {
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
-    // Test: joining a skill map that does not exist is rejected with 404 Not Found
     @Test
     public void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -123,7 +149,6 @@ public class SkillMapServiceIntegrationTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
-    // Test: the owner cannot join their own map since they are already a member as OWNER
     @Test
     public void joinSkillMap_whenOwnerTriesToJoinOwnMap_throwsConflict() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -133,7 +158,6 @@ public class SkillMapServiceIntegrationTest {
     }
 
     // getSkillMaps
-    // Test: a student who has not joined any map receives an empty list
     @Test
     public void getSkillMaps_whenStudentHasNotJoinedAnyMap_returnsEmptyList() {
         List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
@@ -141,7 +165,6 @@ public class SkillMapServiceIntegrationTest {
         assertTrue(maps.isEmpty());
     }
 
-    // Test: the owner sees their own map in the list because createSkillMap auto-adds them as a member
     @Test
     public void getSkillMaps_whenCalledByOwner_returnsOwnedMap() {
         List<SkillMap> maps = skillMapService.getSkillMaps(owner.getToken());
