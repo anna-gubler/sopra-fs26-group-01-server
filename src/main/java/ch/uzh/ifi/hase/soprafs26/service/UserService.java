@@ -137,6 +137,19 @@ public class UserService {
 		return requestingUser;
 	}
 
+	public void changePassword(User user, String oldPassword, String newPassword, String confirmPassword) {
+		if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Old password is incorrect");
+		}
+		if (passwordEncoder.matches(newPassword, user.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "New password must be different from the old password");
+		}
+		if (!newPassword.equals(confirmPassword)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+		}
+		user.setPassword(hashPassword(newPassword));
+	}
+
 	public void deleteUserProfile(User user, String password) {
 		if (!passwordEncoder.matches(password, user.getPassword())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
