@@ -4,7 +4,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
 
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.SkillMapService;
@@ -68,6 +70,7 @@ public class SkillMapControllerTest {
     }
 
     // GET /skillmaps
+    // Test: valid token returns 200 with the list of skill maps the user is a member of
     @Test
     public void givenValidToken_whenGetAllSkillMaps_thenReturnOk() throws Exception {
         given(skillMapService.getSkillMaps(any())).willReturn(new ArrayList<>());
@@ -78,6 +81,7 @@ public class SkillMapControllerTest {
                 .andExpect(status().isOk());
     }
 
+    // Test: invalid token is rejected with 401 Unauthorized
     @Test
     public void givenInvalidToken_whenGetAllSkillMaps_thenReturnUnauthorized() throws Exception {
         given(skillMapService.getSkillMaps(any()))
@@ -90,6 +94,7 @@ public class SkillMapControllerTest {
     }
 
     // POST /skillmaps
+    // Test: valid token and body creates a skill map and returns 201 with the map title
     @Test
     public void givenValidToken_whenCreateSkillMap_thenReturnCreated() throws Exception {
         SkillMap skillMap = newSkillMap();
@@ -103,6 +108,7 @@ public class SkillMapControllerTest {
                 .andExpect(jsonPath("$.title", is(skillMap.getTitle())));
     }
 
+    // Test: invalid token is rejected with 401 Unauthorized
     @Test
     public void givenInvalidToken_whenCreateSkillMap_thenReturnUnauthorized() throws Exception {
         given(skillMapService.createSkillMap(any(), any()))
@@ -116,6 +122,7 @@ public class SkillMapControllerTest {
     }
 
     // GET /skillmaps/{skillMapId}
+    // Test: valid token and existing ID returns 200 with the skill map
     @Test
     public void givenValidToken_whenGetSkillMapById_thenReturnSkillMap() throws Exception {
         SkillMap skillMap = newSkillMap();
@@ -128,6 +135,7 @@ public class SkillMapControllerTest {
                 .andExpect(jsonPath("$.title", is(skillMap.getTitle())));
     }
 
+    // Test: non-existent skill map ID returns 404 Not Found
     @Test
     public void givenInvalidId_whenGetSkillMapById_thenReturnNotFound() throws Exception {
         given(skillMapService.getSkillMapById(eq(999L), any()))
@@ -140,6 +148,7 @@ public class SkillMapControllerTest {
     }
 
     // PATCH /skillmaps/{skillMapId}
+    // Test: owner can update the skill map and receives 200 with the updated title
     @Test
     public void givenValidToken_whenUpdateSkillMap_thenReturnUpdated() throws Exception {
         SkillMap skillMap = newSkillMap();
@@ -157,6 +166,7 @@ public class SkillMapControllerTest {
                 .andExpect(jsonPath("$.title", is("Updated Title")));
     }
 
+    // Test: non-owner trying to update a skill map is rejected with 403 Forbidden
     @Test
     public void givenNonOwner_whenUpdateSkillMap_thenReturnForbidden() throws Exception {
         given(skillMapService.updateSkillMap(eq(1L), any(), any()))
@@ -170,6 +180,7 @@ public class SkillMapControllerTest {
     }
 
     // DELETE /skillmaps/{skillMapId}
+    // Test: owner can delete a skill map and receives 204 No Content
     @Test
     public void givenValidToken_whenDeleteSkillMap_thenReturnNoContent() throws Exception {
         mockMvc.perform(delete("/skillmaps/1")
@@ -178,6 +189,7 @@ public class SkillMapControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    // Test: non-owner trying to delete a skill map is rejected with 403 Forbidden
     @Test
     public void givenNonOwner_whenDeleteSkillMap_thenReturnForbidden() throws Exception {
         willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
@@ -189,7 +201,77 @@ public class SkillMapControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // POST /skillmaps/join
+    // Test: valid invite code and skill map ID returns the created membership with 201
+    @Test
+    public void givenValidInviteCode_whenJoinSkillMap_thenReturnCreated() throws Exception {
+        SkillMapMembership membership = new SkillMapMembership();
+        given(skillMapService.joinSkillMap(any(), any(), any())).willReturn(membership);
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setSkillMapId(1L);
+        dto.setInviteCode("VALIDCODE1");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isCreated());
+    }
+
+    // Test: wrong invite code is rejected with 403 Forbidden
+    @Test
+    public void givenWrongInviteCode_whenJoinSkillMap_thenReturnForbidden() throws Exception {
+        given(skillMapService.joinSkillMap(any(), any(), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setSkillMapId(1L);
+        dto.setInviteCode("WRONGCODE1");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isForbidden());
+    }
+
+    // Test: joining a map the user is already a member of returns 409 Conflict
+    @Test
+    public void givenUserAlreadyMember_whenJoinSkillMap_thenReturnConflict() throws Exception {
+        given(skillMapService.joinSkillMap(any(), any(), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.CONFLICT));
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setSkillMapId(1L);
+        dto.setInviteCode("VALIDCODE1");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isConflict());
+    }
+
+    // Test: joining a skill map that does not exist returns 404 Not Found
+    @Test
+    public void givenNonExistentSkillMapId_whenJoinSkillMap_thenReturnNotFound() throws Exception {
+        given(skillMapService.joinSkillMap(any(), any(), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setSkillMapId(999L);
+        dto.setInviteCode("anycode");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isNotFound());
+    }
+
     // GET /skillmaps/{skillMapId}/members
+    // Test: valid token returns 200 with the list of members for a skill map
     @Test
     public void givenValidToken_whenGetMembers_thenReturnOk() throws Exception {
         given(skillMapService.getMembers(eq(1L), any())).willReturn(new ArrayList<>());
@@ -201,6 +283,7 @@ public class SkillMapControllerTest {
     }
 
     // DELETE /skillmaps/{skillMapId}/members/{userId}
+    // Test: owner or the member themselves can remove a membership and receives 204 No Content
     @Test
     public void givenValidToken_whenRemoveMember_thenReturnNoContent() throws Exception {
         mockMvc.perform(delete("/skillmaps/1/members/2")

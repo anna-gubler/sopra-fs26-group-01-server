@@ -1,7 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
-import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -12,11 +11,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
-
-import java.time.LocalDateTime;
 
 @SpringBootTest
 @Transactional
@@ -36,78 +36,136 @@ class SkillMapServiceIntegrationTest {
 
     @Autowired
     private UserService userService;
-    
+
     private User owner;
+    private User student;
+    private SkillMap skillMap;
 
     @BeforeEach
-    void setup() {
-        owner = new User();
-        owner.setUsername("testowner");
-        owner.setPassword("password");
-        owner.setToken("owner-token");
-        owner.setStatus(UserStatus.ONLINE);
-        owner.setSeed("seed123");           
-        owner.setStyle("avataaars");        
-        owner.setCreationDate(LocalDateTime.now());
-        userRepository.save(owner);
-        userRepository.flush();
+    public void setup() {
+        skillMapMembershipRepository.deleteAll();
+        skillMapRepository.deleteAll();
+        userRepository.deleteAll();
+
+        User ownerInput = new User();
+        ownerInput.setUsername("owner");
+        ownerInput.setPassword("password123");
+        owner = userService.createUser(ownerInput);
+
+        User studentInput = new User();
+        studentInput.setUsername("student");
+        studentInput.setPassword("password456");
+        student = userService.createUser(studentInput);
+
+        SkillMap mapInput = new SkillMap();
+        mapInput.setTitle("Test Map");
+        mapInput.setIsPublic(false);
+        mapInput.setNumberOfLevels(3);
+        skillMap = skillMapService.createSkillMap(mapInput, owner.getToken());
     }
 
+    // createSkillMap
     @Test
-    void createSkillMap_persistedCorrectlyWithOwnerMembership() {
+    public void createSkillMap_persistedCorrectlyWithOwnerMembership() {
         SkillMap input = new SkillMap();
         input.setTitle("Integration Map");
         input.setIsPublic(true);
         input.setNumberOfLevels(3);
 
-        SkillMap result = skillMapService.createSkillMap(input, "owner-token");
+        SkillMap result = skillMapService.createSkillMap(input, owner.getToken());
 
-        // map is persisted
         assertNotNull(result.getId());
         assertEquals("Integration Map", result.getTitle());
         assertTrue(skillMapRepository.findById(result.getId()).isPresent());
-
-        // owner membership is auto-created
         assertTrue(skillMapMembershipRepository
                 .existsBySkillMapIdAndUserId(result.getId(), owner.getId()));
     }
 
+    // deleteSkillMap
     @Test
-    void deleteSkillMap_removedFromDatabaseWithMemberships() {
+    public void deleteSkillMap_removedFromDatabaseWithMemberships() {
         SkillMap input = new SkillMap();
         input.setTitle("To Delete");
         input.setIsPublic(true);
         input.setNumberOfLevels(2);
-        SkillMap saved = skillMapService.createSkillMap(input, "owner-token");
+        SkillMap saved = skillMapService.createSkillMap(input, owner.getToken());
         Long mapId = saved.getId();
 
-        skillMapService.deleteSkillMap(mapId, "owner-token");
+        skillMapService.deleteSkillMap(mapId, owner.getToken());
 
         assertFalse(skillMapRepository.findById(mapId).isPresent());
         assertTrue(skillMapMembershipRepository.findBySkillMapId(mapId).isEmpty());
     }
 
+    // joinSkillMap
     @Test
-    void joinSkillMap_membershipPersistedWithStudentRole() {
-        // create map as owner
-        SkillMap input = new SkillMap();
-        input.setTitle("Joinable Map");
-        input.setIsPublic(true);
-        input.setNumberOfLevels(2);
-        SkillMap saved = skillMapService.createSkillMap(input, owner.getToken());
-
-        // create a second user
-        User newStudent = new User();
-        newStudent.setUsername("student");
-        newStudent.setPassword("password");
-        User student = userService.createUser(newStudent);
-
+    public void joinSkillMap_withValidInviteCode_createsMembershipWithStudentRole() {
         SkillMapMembership membership = skillMapService.joinSkillMap(
-                saved.getId(), saved.getInviteCode(), student.getToken());
+                skillMap.getId(), skillMap.getInviteCode(), student.getToken());
 
         assertNotNull(membership.getId());
+        assertEquals(student.getId(), membership.getUserId());
+        assertEquals(skillMap.getId(), membership.getSkillMapId());
         assertEquals(SkillMapRole.STUDENT, membership.getRole());
-        assertTrue(skillMapMembershipRepository
-                .existsBySkillMapIdAndUserId(saved.getId(), student.getId()));
+    }
+
+    @Test
+    public void joinSkillMap_withValidInviteCode_skillMapAppearsInStudentsMapList() {
+        skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
+
+        List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
+
+        assertEquals(1, maps.size());
+        assertEquals(skillMap.getId(), maps.get(0).getId());
+    }
+
+    @Test
+    public void joinSkillMap_withWrongInviteCode_throwsForbidden() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                skillMapService.joinSkillMap(skillMap.getId(), "WRONGCODE1", student.getToken()));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
+    public void joinSkillMap_whenStudentAlreadyMember_throwsConflict() {
+        skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken()));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    @Test
+    public void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                skillMapService.joinSkillMap(999999L, "anycode", student.getToken()));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    public void joinSkillMap_whenOwnerTriesToJoinOwnMap_throwsConflict() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), owner.getToken()));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    // getSkillMaps
+    @Test
+    public void getSkillMaps_whenStudentHasNotJoinedAnyMap_returnsEmptyList() {
+        List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
+
+        assertTrue(maps.isEmpty());
+    }
+
+    @Test
+    public void getSkillMaps_whenCalledByOwner_returnsOwnedMap() {
+        List<SkillMap> maps = skillMapService.getSkillMaps(owner.getToken());
+
+        assertEquals(1, maps.size());
+        assertEquals(skillMap.getId(), maps.get(0).getId());
     }
 }
