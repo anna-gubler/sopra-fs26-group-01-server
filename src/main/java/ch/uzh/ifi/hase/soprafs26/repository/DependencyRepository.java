@@ -11,6 +11,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.*;
 public interface DependencyRepository extends JpaRepository<Dependency, Long> {
     List<Dependency> findByFromSkill(Skill fromSkill);
     List<Dependency> findByToSkill(Skill toSkill);
+    List<Dependency> findByFromSkill_IdIn(List<Long> skillIds);
     // Comment: used for if a skill is deleted
     List<Dependency> findByFromSkillOrToSkill(Skill fromSkill, Skill toSkill);
 }

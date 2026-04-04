@@ -5,12 +5,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
+import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -33,8 +36,23 @@ class DependencyRepositoryIntegrationTest {
     }
 
     private SkillMap createAndPersistSkillMap() {
+        // erst User persistieren um eine gültige ownerId zu bekommen
+        User owner = new User();
+        owner.setUsername("testowner");
+        owner.setPassword("password");
+        owner.setToken("test-token");
+        owner.setStatus(UserStatus.ONLINE);
+        owner.setCreationDate(LocalDateTime.now());
+        owner.setSeed("testseed");
+        owner.setStyle("pixel");
+        owner.setBio("");
+        owner = entityManager.persistFlushFind(owner);
+
         SkillMap skillMap = new SkillMap();
         skillMap.setTitle("Test Map");
+        skillMap.setIsPublic(false);
+        skillMap.setNumberOfLevels(3);
+        skillMap.setOwnerId(owner.getId());
         return entityManager.persist(skillMap);
     }
 
