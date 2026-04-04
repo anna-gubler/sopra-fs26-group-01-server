@@ -8,9 +8,8 @@ public class SkillGetDTO {
     private String difficulty;
     private Integer level;
     private Float positionX;
-    private Float positionY;
     private Boolean isLocked;
-    private Long mapId;
+    private Long skillMapId;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -33,12 +32,9 @@ public class SkillGetDTO {
     public Float getPositionX() { return positionX; }
     public void setPositionX(Float positionX) { this.positionX = positionX; }
 
-    public Float getPositionY() { return positionY; }
-    public void setPositionY(Float positionY) { this.positionY = positionY; }
-
     public Boolean getIsLocked() { return isLocked; }
     public void setIsLocked(Boolean isLocked) { this.isLocked = isLocked; }
 
-    public Long getMapId() { return mapId; }
-    public void setMapId(Long mapId) { this.mapId = mapId; }
+    public Long getSkillMapId() { return skillMapId; }
+    public void setSkillMapId(Long skillMapId) { this.skillMapId = skillMapId; }
 }

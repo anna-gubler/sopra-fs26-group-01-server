@@ -82,7 +82,7 @@ public interface DTOMapper {
     User convertUserPutAvatarDTOtoEntity(UserPutAvatarDTO userPutAvatarDTO);
 
     // Skill mappings
-    @Mapping(source = "skillMap.id", target = "mapId")
+    @Mapping(source = "skillMap.id", target = "skillMapId")
     SkillGetDTO convertEntityToSkillGetDTO(Skill skill);
 
     @Mapping(target = "skillMap", ignore = true)

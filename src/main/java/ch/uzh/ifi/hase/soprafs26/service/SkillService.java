@@ -147,7 +147,6 @@ public class SkillService {
         if (updatedSkill.getResources() != null) skill.setResources(updatedSkill.getResources());
         if (updatedSkill.getDifficulty() != null) skill.setDifficulty(updatedSkill.getDifficulty());
         if (updatedSkill.getPositionX() != null) skill.setPositionX(updatedSkill.getPositionX());
-        if (updatedSkill.getPositionY() != null) skill.setPositionY(updatedSkill.getPositionY());
 
         return skillRepository.save(skill);
     }
