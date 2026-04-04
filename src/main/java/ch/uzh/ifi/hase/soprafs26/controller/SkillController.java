@@ -21,12 +21,16 @@ public class SkillController {
         this.skillService = skillService;
     }
 
+    private String extractToken(String authHeader) {
+        return authHeader.substring("Bearer ".length()).trim();
+    }
+
     // 301 - GET /skillmaps/{skillMapId}/skills
     @GetMapping("/skillmaps/{skillMapId}/skills")
     @ResponseStatus(HttpStatus.OK)
     public List<SkillGetDTO> getSkillsByMap(@PathVariable Long skillMapId,
-                                             @RequestHeader("token") String token) {
-        return skillService.getSkillsByMap(skillMapId, token)
+                                             @RequestHeader("Authorization") String authHeader) {
+        return skillService.getSkillsByMap(skillMapId, extractToken(authHeader))
             .stream()
             .map(DTOMapper.INSTANCE::convertEntityToSkillGetDTO)
             .collect(Collectors.toList());
@@ -37,9 +41,9 @@ public class SkillController {
     @ResponseStatus(HttpStatus.CREATED)
     public SkillGetDTO createSkill(@PathVariable Long skillMapId,
                                    @RequestBody SkillPostDTO skillPostDTO,
-                                   @RequestHeader("token") String token) {
+                                   @RequestHeader("Authorization") String authHeader) {
         Skill skill = DTOMapper.INSTANCE.convertSkillPostDTOtoEntity(skillPostDTO);
-        Skill created = skillService.createSkill(skillMapId, skill, token);
+        Skill created = skillService.createSkill(skillMapId, skill, extractToken(authHeader));
         return DTOMapper.INSTANCE.convertEntityToSkillGetDTO(created);
     }
 
@@ -47,8 +51,8 @@ public class SkillController {
     @GetMapping("/skills/{skillId}")
     @ResponseStatus(HttpStatus.OK)
     public SkillGetDTO getSkillById(@PathVariable Long skillId,
-                                    @RequestHeader("token") String token) {
-        Skill skill = skillService.getSkillById(skillId, token);
+                                    @RequestHeader("Authorization") String authHeader) {
+        Skill skill = skillService.getSkillById(skillId, extractToken(authHeader));
         return DTOMapper.INSTANCE.convertEntityToSkillGetDTO(skill);
     }
 
@@ -57,9 +61,9 @@ public class SkillController {
     @ResponseStatus(HttpStatus.OK)
     public SkillGetDTO updateSkill(@PathVariable Long skillId,
                                    @RequestBody SkillPutDTO skillPutDTO,
-                                   @RequestHeader("token") String token) {
+                                   @RequestHeader("Authorization") String authHeader) {
         Skill incoming = DTOMapper.INSTANCE.convertSkillPutDTOtoEntity(skillPutDTO);
-        Skill updated = skillService.updateSkill(skillId, incoming, token);
+        Skill updated = skillService.updateSkill(skillId, incoming, extractToken(authHeader));
         return DTOMapper.INSTANCE.convertEntityToSkillGetDTO(updated);
     }
 
@@ -67,7 +71,7 @@ public class SkillController {
     @DeleteMapping("/skills/{skillId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSkill(@PathVariable Long skillId,
-                             @RequestHeader("token") String token) {
-        skillService.deleteSkill(skillId, token);
+                             @RequestHeader("Authorization") String authHeader) {
+        skillService.deleteSkill(skillId, extractToken(authHeader));
     }
 }
