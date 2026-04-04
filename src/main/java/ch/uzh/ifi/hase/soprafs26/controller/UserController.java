@@ -9,6 +9,7 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPasswordChangeDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutAvatarDTO;
 import jakarta.validation.Valid;
 
@@ -95,6 +96,15 @@ public class UserController {
 	public UserGetDTO getUserById(@PathVariable Long id) {
 		User requestedUser = userService.getUserById(id);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(requestedUser);
+	}
+
+	@PatchMapping("/users/me/password")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void changePassword(@RequestBody UserPasswordChangeDTO dto,
+			@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.substring("Bearer ".length()).trim();
+		User user = userService.getUserByToken(token);
+		userService.changePassword(user, dto.getOldPassword(), dto.getNewPassword(), dto.getConfirmPassword());
 	}
 
 	@PutMapping("/users/me/avatar")
