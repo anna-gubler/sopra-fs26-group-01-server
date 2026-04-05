@@ -4,9 +4,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +20,9 @@ import java.time.LocalDateTime;
 @SpringBootTest
 @Transactional
 class SkillServiceIntegrationTest {
+
+    @Autowired
+    private DependencyRepository dependencyRepository;
 
     @Autowired
     private SkillService skillService;
@@ -40,9 +41,10 @@ class SkillServiceIntegrationTest {
 
     @BeforeEach
     void setup() {
+        userRepository.deleteAll();  
+        dependencyRepository.deleteAll();
         skillRepository.deleteAll();
         skillMapRepository.deleteAll(); 
-        userRepository.deleteAll();  
 
         owner = new User();
         owner.setUsername("testowner");
