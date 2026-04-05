@@ -6,6 +6,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,9 @@ class SkillMapServiceIntegrationTest {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private SkillRepository skillRepository;
+
     private User owner;
     private User student;
     private SkillMap skillMap;
@@ -44,8 +48,9 @@ class SkillMapServiceIntegrationTest {
     @BeforeEach
     public void setup() {
         skillMapMembershipRepository.deleteAll();
-        skillMapRepository.deleteAll();
-        userRepository.deleteAll();
+        skillRepository.deleteAll();
+        skillMapRepository.deleteAll(); 
+        userRepository.deleteAll();  
 
         User ownerInput = new User();
         ownerInput.setUsername("owner");

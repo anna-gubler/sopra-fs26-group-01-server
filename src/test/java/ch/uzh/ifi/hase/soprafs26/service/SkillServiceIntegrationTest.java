@@ -40,6 +40,10 @@ class SkillServiceIntegrationTest {
 
     @BeforeEach
     void setup() {
+        skillRepository.deleteAll();
+        skillMapRepository.deleteAll(); 
+        userRepository.deleteAll();  
+
         owner = new User();
         owner.setUsername("testowner");
         owner.setPassword("password");
