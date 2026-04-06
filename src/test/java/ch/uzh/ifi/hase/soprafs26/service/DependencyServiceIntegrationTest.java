@@ -120,7 +120,7 @@ class DependencyServiceIntegrationTest {
         Dependency created = dependencyService.createDependency(
             skillMap.getId(), fromSkill.getId(), toSkill.getId(), "owner-token");
 
-        dependencyService.deleteSkill(created.getId(), "owner-token");
+        dependencyService.deleteDependency(created.getId(), "owner-token");
 
         assertTrue(dependencyRepository.findById(created.getId()).isEmpty());
     }

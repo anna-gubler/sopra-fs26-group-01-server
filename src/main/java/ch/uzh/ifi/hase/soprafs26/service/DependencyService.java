@@ -172,7 +172,7 @@ public class DependencyService {
 
 
     // 403 Delete a dependency
-    public void deleteSkill(Long dependencyId, String token) {
+    public void deleteDependency(Long dependencyId, String token) {
         Dependency dependency = dependencyRepository.findById(dependencyId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dependency not found"));
 

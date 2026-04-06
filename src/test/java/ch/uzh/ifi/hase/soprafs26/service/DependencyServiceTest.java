@@ -168,13 +168,13 @@ class DependencyServiceTest {
             () -> dependencyService.createDependency(10L, 100L, 200L, "owner-token"));
     }
 
-    // deleteSkill 
+    // deleteDependency 
     @Test
     void deleteDependency_validOwner_deletesSuccessfully() {
         when(dependencyRepository.findById(1000L)).thenReturn(Optional.of(dependency));
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
-        assertDoesNotThrow(() -> dependencyService.deleteSkill(1000L, "owner-token"));
+        assertDoesNotThrow(() -> dependencyService.deleteDependency(1000L, "owner-token"));
         verify(dependencyRepository, times(1)).delete(dependency);
     }
 
@@ -183,7 +183,7 @@ class DependencyServiceTest {
         when(dependencyRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.deleteSkill(99L, "owner-token"));
+            () -> dependencyService.deleteDependency(99L, "owner-token"));
     }
 
     @Test
@@ -192,6 +192,6 @@ class DependencyServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.deleteSkill(1000L, "wrong-token"));
+            () -> dependencyService.deleteDependency(1000L, "wrong-token"));
     }
 }

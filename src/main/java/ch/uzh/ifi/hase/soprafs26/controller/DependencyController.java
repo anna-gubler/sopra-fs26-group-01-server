@@ -47,6 +47,6 @@ public class DependencyController {
     public void deleteDependency(
             @PathVariable Long dependencyId,
             @RequestHeader("Authorization") String token) {
-        dependencyService.deleteSkill(dependencyId, token);
+        dependencyService.deleteDependency(dependencyId, token);
     }
 }

@@ -177,7 +177,7 @@ class DependencyControllerTest {
 
     @Test
     void deleteDependency_returns204() throws Exception {
-        doNothing().when(dependencyService).deleteSkill(eq(1000L), any());
+        doNothing().when(dependencyService).deleteDependency(eq(1000L), any());
 
         mockMvc.perform(delete("/dependencies/1000")
                 .header("Authorization", "Bearer owner-token"))
@@ -187,7 +187,7 @@ class DependencyControllerTest {
     @Test
     void deleteDependency_forbidden_returns403() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
-            .when(dependencyService).deleteSkill(eq(1000L), any());
+            .when(dependencyService).deleteDependency(eq(1000L), any());
 
         mockMvc.perform(delete("/dependencies/1000")
                 .header("Authorization", "Bearer wrong-token"))
@@ -197,7 +197,7 @@ class DependencyControllerTest {
     @Test
     void deleteDependency_notFound_returns404() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND))
-            .when(dependencyService).deleteSkill(eq(99L), any());
+            .when(dependencyService).deleteDependency(eq(99L), any());
 
         mockMvc.perform(delete("/dependencies/99")
                 .header("Authorization", "Bearer owner-token"))
