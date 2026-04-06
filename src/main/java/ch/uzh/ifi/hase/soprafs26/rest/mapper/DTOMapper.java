@@ -3,10 +3,12 @@ package ch.uzh.ifi.hase.soprafs26.rest.mapper;
 import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
+import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
@@ -127,4 +129,9 @@ public interface DTOMapper {
     @Mapping(source = "role", target = "role")
     @Mapping(source = "joinedAt", target = "joinedAt")
     SkillMapMembershipGetDTO convertEntityToSkillMapMembershipGetDTO(SkillMapMembership membership);
+
+    // Dependencies
+    @Mapping(source = "fromSkill.id", target = "fromSkillId")
+    @Mapping(source = "toSkill.id", target = "toSkillId")
+    DependencyGetDTO convertDependencyEntityToGetDTO(Dependency dependency);
 }

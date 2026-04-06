@@ -4,9 +4,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +16,14 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @SpringBootTest
 @Transactional
 class SkillServiceIntegrationTest {
+
+    @Autowired
+    private DependencyRepository dependencyRepository;
 
     @Autowired
     private SkillService skillService;
@@ -40,10 +42,16 @@ class SkillServiceIntegrationTest {
 
     @BeforeEach
     void setup() {
+        dependencyRepository.deleteAll();
+        skillRepository.deleteAll();
+        skillMapRepository.deleteAll(); 
+        userRepository.deleteAll(); 
+
         owner = new User();
-        owner.setUsername("testowner");
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        owner.setUsername("testowner-" + uniqueSuffix);
         owner.setPassword("password");
-        owner.setToken("owner-token");
+        owner.setToken(UUID.randomUUID().toString());
         owner.setStatus(UserStatus.ONLINE);  
         owner.setSeed("seed123");             
         owner.setStyle("avataaars");          
@@ -67,7 +75,7 @@ class SkillServiceIntegrationTest {
         input.setName("Loops");
         input.setLevel(1);
 
-        Skill result = skillService.createSkill(skillMap.getId(), input, "owner-token");
+        Skill result = skillService.createSkill(skillMap.getId(), input, owner.getToken());
 
         assertNotNull(result.getId());
         assertEquals("Loops", result.getName());
@@ -80,9 +88,9 @@ class SkillServiceIntegrationTest {
         Skill input = new Skill();
         input.setName("ToDelete");
         input.setLevel(1);
-        Skill saved = skillService.createSkill(skillMap.getId(), input, "owner-token");
+        Skill saved = skillService.createSkill(skillMap.getId(), input, owner.getToken());
 
-        skillService.deleteSkill(saved.getId(), "owner-token");
+        skillService.deleteSkill(saved.getId(), owner.getToken());
 
         assertFalse(skillRepository.findById(saved.getId()).isPresent());
     }

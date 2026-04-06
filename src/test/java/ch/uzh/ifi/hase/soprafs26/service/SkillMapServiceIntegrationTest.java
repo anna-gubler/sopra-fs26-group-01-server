@@ -4,9 +4,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,15 +35,23 @@ class SkillMapServiceIntegrationTest {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private DependencyRepository dependencyRepository;
+
+    @Autowired
+    private SkillRepository skillRepository;
+
     private User owner;
     private User student;
     private SkillMap skillMap;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         skillMapMembershipRepository.deleteAll();
-        skillMapRepository.deleteAll();
-        userRepository.deleteAll();
+        dependencyRepository.deleteAll();
+        skillRepository.deleteAll();
+        skillMapRepository.deleteAll(); 
+        userRepository.deleteAll();  
 
         User ownerInput = new User();
         ownerInput.setUsername("owner");
@@ -66,7 +72,7 @@ class SkillMapServiceIntegrationTest {
 
     // createSkillMap
     @Test
-    public void createSkillMap_persistedCorrectlyWithOwnerMembership() {
+    void createSkillMap_persistedCorrectlyWithOwnerMembership() {
         SkillMap input = new SkillMap();
         input.setTitle("Integration Map");
         input.setIsPublic(true);
@@ -83,7 +89,7 @@ class SkillMapServiceIntegrationTest {
 
     // deleteSkillMap
     @Test
-    public void deleteSkillMap_removedFromDatabaseWithMemberships() {
+    void deleteSkillMap_removedFromDatabaseWithMemberships() {
         SkillMap input = new SkillMap();
         input.setTitle("To Delete");
         input.setIsPublic(true);
@@ -99,7 +105,7 @@ class SkillMapServiceIntegrationTest {
 
     // joinSkillMap
     @Test
-    public void joinSkillMap_withValidInviteCode_createsMembershipWithStudentRole() {
+    void joinSkillMap_withValidInviteCode_createsMembershipWithStudentRole() {
         SkillMapMembership membership = skillMapService.joinSkillMap(
                 skillMap.getId(), skillMap.getInviteCode(), student.getToken());
 
@@ -110,7 +116,7 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    public void joinSkillMap_withValidInviteCode_skillMapAppearsInStudentsMapList() {
+    void joinSkillMap_withValidInviteCode_skillMapAppearsInStudentsMapList() {
         skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
 
         List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
@@ -120,7 +126,7 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    public void joinSkillMap_withWrongInviteCode_throwsForbidden() {
+    void joinSkillMap_withWrongInviteCode_throwsForbidden() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap(skillMap.getId(), "WRONGCODE1", student.getToken()));
 
@@ -128,7 +134,7 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    public void joinSkillMap_whenStudentAlreadyMember_throwsConflict() {
+    void joinSkillMap_whenStudentAlreadyMember_throwsConflict() {
         skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
@@ -138,7 +144,7 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    public void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
+    void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap(999999L, "anycode", student.getToken()));
 
@@ -146,7 +152,7 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    public void joinSkillMap_whenOwnerTriesToJoinOwnMap_throwsConflict() {
+    void joinSkillMap_whenOwnerTriesToJoinOwnMap_throwsConflict() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), owner.getToken()));
 
@@ -155,14 +161,14 @@ class SkillMapServiceIntegrationTest {
 
     // getSkillMaps
     @Test
-    public void getSkillMaps_whenStudentHasNotJoinedAnyMap_returnsEmptyList() {
+    void getSkillMaps_whenStudentHasNotJoinedAnyMap_returnsEmptyList() {
         List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
 
         assertTrue(maps.isEmpty());
     }
 
     @Test
-    public void getSkillMaps_whenCalledByOwner_returnsOwnedMap() {
+    void getSkillMaps_whenCalledByOwner_returnsOwnedMap() {
         List<SkillMap> maps = skillMapService.getSkillMaps(owner.getToken());
 
         assertEquals(1, maps.size());
