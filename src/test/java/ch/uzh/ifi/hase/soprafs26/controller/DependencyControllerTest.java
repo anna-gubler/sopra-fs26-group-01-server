@@ -21,9 +21,6 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.ArgumentMatchers.any;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
 
 import ch.uzh.ifi.hase.soprafs26.entity.*;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyPostDTO;
