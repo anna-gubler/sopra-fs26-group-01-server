@@ -66,4 +66,10 @@ public class CollaborationSessionService {
 
         broadcastService.broadcastSessionEnded(skillMapId, session.getId(), session.getEndedAt());
     }
+
+    public CollaborationSession getActiveSession(Long skillMapId) {
+        CollaborationSession session = sessionRepository.findBySkillMapIdAndIsActiveTrue(skillMapId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"));
+        return session;
+    }
 }
