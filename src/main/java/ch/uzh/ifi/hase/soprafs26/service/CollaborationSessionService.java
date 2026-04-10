@@ -1,7 +1,10 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
+import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 
 import org.springframework.http.HttpStatus;
@@ -13,20 +16,27 @@ import java.time.LocalDateTime;
 @Service
 public class CollaborationSessionService {
 
+    private final SkillMapRepository skillMapRepository;
     private final CollaborationSessionRepository sessionRepository;
     private final WebSocketBroadcastService broadcastService;
 
     public CollaborationSessionService(CollaborationSessionRepository sessionRepository,
-                                       WebSocketBroadcastService broadcastService) {
+            WebSocketBroadcastService broadcastService, SkillMapRepository skillMapRepository) {
         this.sessionRepository = sessionRepository;
         this.broadcastService = broadcastService;
+        this.skillMapRepository = skillMapRepository;
     }
 
-    public CollaborationSession startSession(Long skillMapId) {
-        // enforce one active session per map
+    public CollaborationSession startSession(Long skillMapId, User user) {
+        SkillMap skillMap = skillMapRepository.findById(skillMapId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+        if (!skillMap.getOwnerId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can start a session");
+        }
+
         if (sessionRepository.existsBySkillMapIdAndIsActiveTrue(skillMapId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "A session is already active for this skill map");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A session is already active");
         }
 
         CollaborationSession session = new CollaborationSession();
@@ -35,29 +45,25 @@ public class CollaborationSessionService {
         session.setActive(true);
         session = sessionRepository.save(session);
 
-        // broadcast after save so session ID is available
         broadcastService.broadcastSessionStarted(skillMapId, session.getId(), session.getStartedAt());
-
         return session;
     }
 
-    public void endSession(Long skillMapId) {
-        CollaborationSession session = sessionRepository
-                .findBySkillMapIdAndIsActiveTrue(skillMapId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No active session found for this skill map"));
+    public void endSession(Long skillMapId, User user) {
+        SkillMap skillMap = skillMapRepository.findById(skillMapId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+        if (!skillMap.getOwnerId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can end a session");
+        }
+
+        CollaborationSession session = sessionRepository.findBySkillMapIdAndIsActiveTrue(skillMapId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"));
 
         session.setActive(false);
         session.setEndedAt(LocalDateTime.now());
         session = sessionRepository.save(session);
 
         broadcastService.broadcastSessionEnded(skillMapId, session.getId(), session.getEndedAt());
-    }
-
-    public CollaborationSession getActiveSession(Long skillMapId) {
-        return sessionRepository
-                .findBySkillMapIdAndIsActiveTrue(skillMapId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No active session"));
     }
 }
