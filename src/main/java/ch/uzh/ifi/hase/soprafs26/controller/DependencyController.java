@@ -23,7 +23,8 @@ public class DependencyController {
     @ResponseStatus(HttpStatus.OK)
     public List<DependencyGetDTO> getDependenciesByMap(
             @PathVariable Long skillMapId,
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring("Bearer ".length()).trim();
         return dependencyService.getDependenciesByMap(skillMapId, token)
             .stream()
             .map(DTOMapper.INSTANCE::convertDependencyEntityToGetDTO)
@@ -36,7 +37,8 @@ public class DependencyController {
     public DependencyGetDTO createDependency(
             @PathVariable Long skillMapId,
             @RequestBody DependencyPostDTO dependencyPostDTO,
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring("Bearer ".length()).trim();
         Dependency created = dependencyService.createDependency(skillMapId, dependencyPostDTO.getFromSkillId(), dependencyPostDTO.getToSkillId(), token);
         return DTOMapper.INSTANCE.convertDependencyEntityToGetDTO(created);
     }
@@ -46,7 +48,8 @@ public class DependencyController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDependency(
             @PathVariable Long dependencyId,
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring("Bearer ".length()).trim();
         dependencyService.deleteDependency(dependencyId, token);
     }
 }
