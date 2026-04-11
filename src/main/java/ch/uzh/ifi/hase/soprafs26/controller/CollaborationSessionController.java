@@ -15,7 +15,7 @@ public class CollaborationSessionController {
     private final UserService userService;
 
     public CollaborationSessionController(CollaborationSessionService sessionService,
-                                          UserService userService) {
+            UserService userService) {
         this.sessionService = sessionService;
         this.userService = userService;
     }
@@ -23,7 +23,7 @@ public class CollaborationSessionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CollaborationSession startSession(@PathVariable Long skillMapId,
-                                             @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring("Bearer ".length()).trim();
         User user = userService.getUserByToken(token);
         return sessionService.startSession(skillMapId, user);
@@ -31,14 +31,17 @@ public class CollaborationSessionController {
 
     @GetMapping("/active")
     @ResponseStatus(HttpStatus.OK)
-    public CollaborationSession getActiveSession(@PathVariable Long skillMapId) {
-        return sessionService.getActiveSession(skillMapId);
+    public CollaborationSession getActiveSession(@PathVariable Long skillMapId,
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring("Bearer ".length()).trim();
+        User user = userService.getUserByToken(token);
+        return sessionService.getActiveSession(skillMapId, user);
     }
 
     @PostMapping("/active/end")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void endSession(@PathVariable Long skillMapId,
-                           @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring("Bearer ".length()).trim();
         User user = userService.getUserByToken(token);
         sessionService.endSession(skillMapId, user);

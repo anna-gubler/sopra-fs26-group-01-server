@@ -4,6 +4,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,9 @@ public class CollaborationSessionServiceTest {
 
     @Mock
     private WebSocketBroadcastService broadcastService;
+
+    @Mock
+    private SkillMapMembershipRepository membershipRepository;
 
     @InjectMocks
     private CollaborationSessionService sessionService;
@@ -158,25 +162,35 @@ public class CollaborationSessionServiceTest {
 
     // --- getActiveSession ---
 
+    // --- getActiveSession ---
+
     @Test
-    public void getActiveSession_sessionExists_returnsSession() {
-        CollaborationSession session = buildActiveSession();
-
+    public void getActiveSession_memberAndSessionExists_returnsSession() {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
         Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
-                .thenReturn(Optional.of(session));
+                .thenReturn(Optional.of(buildActiveSession()));
 
-        CollaborationSession result = sessionService.getActiveSession(SKILL_MAP_ID);
+        CollaborationSession result = sessionService.getActiveSession(SKILL_MAP_ID, buildOwner());
 
         assertTrue(result.isActive());
         assertEquals(SKILL_MAP_ID, result.getSkillMapId());
     }
 
     @Test
+    public void getActiveSession_notMember_throwsForbidden() {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(false);
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.getActiveSession(SKILL_MAP_ID, buildOwner()));
+    }
+
+    @Test
     public void getActiveSession_noActiveSession_throwsNotFound() {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
         Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
-                () -> sessionService.getActiveSession(SKILL_MAP_ID));
+                () -> sessionService.getActiveSession(SKILL_MAP_ID, buildOwner()));
     }
 }
