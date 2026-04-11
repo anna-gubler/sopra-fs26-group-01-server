@@ -44,6 +44,7 @@ class SkillControllerTest {
     @MockitoBean
     private UserService userService;
     
+
     @BeforeEach
     void setupMocks() {
         User dummyUser = new User();
@@ -282,5 +283,30 @@ class SkillControllerTest {
                         .header("token", "valid-token"))
                 .andExpect(status().isNotFound());
     }
+        
+    // S8  GET /skillmaps/{skillMapId}/skills/{skillId}
+        @Test
+        void getSkillByIdAndMap_exists_returnsSkill() throws Exception {
+        Skill skill = buildSkill(5L, "Recursion", 3);
 
+        given(skillService.getSkillByIdAndMap(10L, 5L, "valid-token")).willReturn(skill);
+
+        mockMvc.perform(get("/skillmaps/10/skills/5")
+                        .header("Authorization", "Bearer valid-token")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id",   is(5)))
+                .andExpect(jsonPath("$.name", is("Recursion")));
+        }
+
+        @Test
+        void getSkillByIdAndMap_skillNotInMap_returns404() throws Exception {
+        given(skillService.getSkillByIdAndMap(10L, 5L, "valid-token"))
+                .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill does not belong to this SkillMap"));
+
+        mockMvc.perform(get("/skillmaps/10/skills/5")
+                        .header("Authorization", "Bearer valid-token")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+        }
 }
