@@ -135,6 +135,15 @@ public class SkillMapService {
         }
         if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
         if (updates.getIsPublic() != null) existing.setIsPublic(updates.getIsPublic());
+        if (updates.getIsPublic() != null) {
+            existing.setIsPublic(updates.getIsPublic());
+            if (updates.getIsPublic() && existing.getInviteCode() == null) {
+                existing.setInviteCode(generateInviteCode());
+            } else if (!updates.getIsPublic()) {
+                existing.setInviteCode(null);
+            }
+        }
+    
 
         existing = skillMapRepository.save(existing);
         skillMapRepository.flush();
@@ -257,6 +266,7 @@ public class SkillMapService {
         return graph;
     }
 
+    // Helper to generate unique invite code
     SecureRandom random = new SecureRandom();
     private String generateInviteCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
