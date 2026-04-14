@@ -74,4 +74,14 @@ public class SkillController {
                              @RequestHeader("Authorization") String authHeader) {
         skillService.deleteSkill(skillId, extractToken(authHeader));
     }
+
+    // S8 - GET /skillmaps/{skillMapId}/skills/{skillId}
+    @GetMapping("/skillmaps/{skillMapId}/skills/{skillId}")
+    @ResponseStatus(HttpStatus.OK)
+    public SkillGetDTO getSkillByIdAndMap(@PathVariable Long skillMapId,
+                                        @PathVariable Long skillId,
+                                        @RequestHeader("Authorization") String authHeader) {
+        Skill skill = skillService.getSkillByIdAndMap(skillMapId, skillId, extractToken(authHeader));
+        return DTOMapper.INSTANCE.convertEntityToSkillGetDTO(skill);
+    }
 }

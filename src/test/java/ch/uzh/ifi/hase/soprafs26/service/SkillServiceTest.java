@@ -4,10 +4,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +33,8 @@ class SkillServiceTest {
     private UserRepository userRepository;
     @Mock
     private SkillMapMembershipRepository skillMapMembershipRepository;
+    @Mock
+    private DependencyRepository dependencyRepository;
 
     @InjectMocks
     private SkillService skillService;

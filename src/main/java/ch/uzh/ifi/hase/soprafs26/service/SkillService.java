@@ -3,10 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.service;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
-import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +19,16 @@ public class SkillService {
     private final SkillMapRepository skillMapRepository;
     private final UserRepository userRepository;
     private final SkillMapMembershipRepository skillMapMembershipRepository;
+    private final DependencyRepository dependencyRepository;
 
     public SkillService(SkillRepository skillRepository, SkillMapRepository skillMapRepository,
-                        UserRepository userRepository, SkillMapMembershipRepository skillMapMembershipRepository) {
+                        UserRepository userRepository, SkillMapMembershipRepository skillMapMembershipRepository,
+                        DependencyRepository dependencyRepository) {
         this.skillRepository = skillRepository;
         this.skillMapRepository = skillMapRepository;
         this.userRepository = userRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
+        this.dependencyRepository = dependencyRepository;
     }
 
     // #52 - POST
@@ -134,12 +134,28 @@ public class SkillService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Illegal level change: level must be between 1 and " + maxLevel);
             }
-            // TODO (Issue #54 / S5 dependencies): validate that the new level does not violate
-            // dependency constraints — i.e. a skill cannot be moved to the same or lower level
-            // than any of its prerequisite skills. Implement once DependencyService is available.
-            // comment by Anna
 
-            skill.setLevel(updatedSkill.getLevel());
+            int newLevel = updatedSkill.getLevel();
+
+            // prerequisite skills (fromSkill) must be on a lower level
+            dependencyRepository.findByToSkill(skill).forEach(dep -> {
+                if (dep.getFromSkill().getLevel() >= newLevel) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "New level violates dependency: prerequisite skill '" 
+                        + dep.getFromSkill().getName() + "' must be on a lower level");
+                }
+            });
+
+            // dependent skills (toSkill) must be on a higher level
+            dependencyRepository.findByFromSkill(skill).forEach(dep -> {
+                if (dep.getToSkill().getLevel() <= newLevel) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "New level violates dependency: dependent skill '" 
+                        + dep.getToSkill().getName() + "' must be on a higher level");
+                }
+            });
+
+            skill.setLevel(newLevel);
         }
 
         if (updatedSkill.getName() != null) skill.setName(updatedSkill.getName());
@@ -149,5 +165,15 @@ public class SkillService {
         if (updatedSkill.getPositionX() != null) skill.setPositionX(updatedSkill.getPositionX());
 
         return skillRepository.save(skill);
+    }
+    // S8 - GET /skillmaps/{skillMapId}/skills/{skillId}
+    public Skill getSkillByIdAndMap(Long skillMapId, Long skillId, String token) {
+        Skill skill = getSkillById(skillId, token); // reuse existing auth check
+
+        if (!skill.getSkillMap().getId().equals(skillMapId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill does not belong to this SkillMap");
+        }
+
+        return skill;
     }
 }
