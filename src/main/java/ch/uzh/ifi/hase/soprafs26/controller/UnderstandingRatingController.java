@@ -3,7 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.UnderstandingRating;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.UnderstandingRatingService;
-import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,12 +14,9 @@ import java.util.Map;
 public class UnderstandingRatingController {
 
     private final UnderstandingRatingService ratingService;
-    private final UserService userService;
 
-    public UnderstandingRatingController(UnderstandingRatingService ratingService,
-            UserService userService) {
+    public UnderstandingRatingController(UnderstandingRatingService ratingService) {
         this.ratingService = ratingService;
-        this.userService = userService;
     }
 
     // 701 - PUT /sessions/{sessionId}/skills/{skillId}/rating
@@ -28,9 +25,8 @@ public class UnderstandingRatingController {
     public UnderstandingRating submitRating(@PathVariable Long sessionId,
             @PathVariable Long skillId,
             @RequestBody Map<String, Integer> body,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         Integer rating = body.get("rating");
         return ratingService.submitRating(sessionId, skillId, user, rating);
     }
@@ -40,9 +36,8 @@ public class UnderstandingRatingController {
     @ResponseStatus(HttpStatus.OK)
     public List<UnderstandingRating> getRatingsBySkill(@PathVariable Long sessionId,
             @PathVariable Long skillId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         return ratingService.getRatingsBySkill(sessionId, skillId, user);
     }
 
@@ -50,9 +45,8 @@ public class UnderstandingRatingController {
     @GetMapping("/sessions/{sessionId}/ratings")
     @ResponseStatus(HttpStatus.OK)
     public List<UnderstandingRating> getRatingsBySession(@PathVariable Long sessionId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         return ratingService.getRatingsBySession(sessionId, user);
     }
 }

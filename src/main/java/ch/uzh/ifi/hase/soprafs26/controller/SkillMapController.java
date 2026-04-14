@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,9 +33,9 @@ public class SkillMapController {
     // 201 - GET /skillmaps - returns only maps the requester is a member of
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<SkillMapGetDTO> getAllSkillMaps(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        List<SkillMap> skillMaps = skillMapService.getSkillMaps(token);
+    public List<SkillMapGetDTO> getAllSkillMaps(HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        List<SkillMap> skillMaps = skillMapService.getSkillMaps(requester);
         List<SkillMapGetDTO> skillMapGetDTOs = new ArrayList<>();
         for (SkillMap skillmap : skillMaps) {
             skillMapGetDTOs.add(DTOMapper.INSTANCE.convertEntityToSkillMapGetDTO(skillmap));
@@ -45,55 +46,55 @@ public class SkillMapController {
     // 202 - POST /skillmaps
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public SkillMapGetDTO createSkillMap(@RequestBody SkillMapPostDTO skillMapPostDTO, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
+    public SkillMapGetDTO createSkillMap(@RequestBody SkillMapPostDTO skillMapPostDTO, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
         SkillMap newSkillMap = DTOMapper.INSTANCE.convertSkillMapPostDTOtoEntity(skillMapPostDTO);
-        SkillMap created = skillMapService.createSkillMap(newSkillMap, token);
+        SkillMap created = skillMapService.createSkillMap(newSkillMap, requester);
         return DTOMapper.INSTANCE.convertEntityToSkillMapGetDTO(created);
     }
 
     // 203 - GET /skillmaps/{skillMapId}
     @GetMapping("/{skillMapId}")
     @ResponseStatus(HttpStatus.OK)
-    public SkillMapGetDTO getSkillMapById(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        SkillMap skillMap = skillMapService.getSkillMapById(skillMapId, token);
+    public SkillMapGetDTO getSkillMapById(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        SkillMap skillMap = skillMapService.getSkillMapById(skillMapId, requester);
         return DTOMapper.INSTANCE.convertEntityToSkillMapGetDTO(skillMap);
     }
 
     // 204 - PATCH /skillmaps/{skillMapId} (spec 204 uses PATCH, not PUT)
     @PatchMapping("/{skillMapId}")
     @ResponseStatus(HttpStatus.OK)
-    public SkillMapGetDTO updateSkillMap(@PathVariable Long skillMapId, @RequestBody SkillMapPutDTO skillMapPutDTO, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
+    public SkillMapGetDTO updateSkillMap(@PathVariable Long skillMapId, @RequestBody SkillMapPutDTO skillMapPutDTO, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
         SkillMap updates = DTOMapper.INSTANCE.convertSkillMapPutDTOtoEntity(skillMapPutDTO);
-        SkillMap updated = skillMapService.updateSkillMap(skillMapId, updates, token);
+        SkillMap updated = skillMapService.updateSkillMap(skillMapId, updates, requester);
         return DTOMapper.INSTANCE.convertEntityToSkillMapGetDTO(updated);
     }
 
     // 205 - DELETE /skillmaps/{skillMapId}
     @DeleteMapping("/{skillMapId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteSkillMap(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        skillMapService.deleteSkillMap(skillMapId, token);
+    public void deleteSkillMap(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        skillMapService.deleteSkillMap(skillMapId, requester);
     }
 
     // 206 - POST /skillmaps/join
     @PostMapping("/join")
     @ResponseStatus(HttpStatus.CREATED)
-    public SkillMapMembershipGetDTO joinSkillMap(@RequestBody SkillMapJoinDTO joinDTO, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getSkillMapId(), joinDTO.getInviteCode(), token);
+    public SkillMapMembershipGetDTO joinSkillMap(@RequestBody SkillMapJoinDTO joinDTO, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getSkillMapId(), joinDTO.getInviteCode(), requester);
         return DTOMapper.INSTANCE.convertEntityToSkillMapMembershipGetDTO(membership);
     }
 
     // 207 - GET /skillmaps/{skillMapId}/members
     @GetMapping("/{skillMapId}/members")
     @ResponseStatus(HttpStatus.OK)
-    public List<UserGetDTO> getMembers(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        List<User> members = skillMapService.getMembers(skillMapId, token);
+    public List<UserGetDTO> getMembers(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        List<User> members = skillMapService.getMembers(skillMapId, requester);
         List<UserGetDTO> memberDTOs = new ArrayList<>();
         for (User member : members) {
             memberDTOs.add(DTOMapper.INSTANCE.convertEntityToUserGetDTO(member));
@@ -104,16 +105,16 @@ public class SkillMapController {
     // 208 - DELETE /skillmaps/{skillMapId}/members/{userId}
     @DeleteMapping("/{skillMapId}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeMember(@PathVariable Long skillMapId, @PathVariable Long userId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        skillMapService.removeMember(skillMapId, userId, token);
+    public void removeMember(@PathVariable Long skillMapId, @PathVariable Long userId, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        skillMapService.removeMember(skillMapId, userId, requester);
     }
 
     // 209 - GET /skillmaps/{skillMapId}/graph
     @GetMapping("/{skillMapId}/graph")
     @ResponseStatus(HttpStatus.OK)
-    public SkillMapGraphDTO getSkillMapGraph(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        return skillMapService.getSkillMapGraph(skillMapId, token);
+    public SkillMapGraphDTO getSkillMapGraph(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+        return skillMapService.getSkillMapGraph(skillMapId, requester);
     }
 }

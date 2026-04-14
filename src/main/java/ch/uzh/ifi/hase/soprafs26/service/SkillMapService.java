@@ -52,8 +52,7 @@ public class SkillMapService {
     }
 
     // 201 - returns only maps the requester is a member of (spec 201.1)
-    public List<SkillMap> getSkillMaps(String token) {
-        User requester = userService.getUserByToken(token);
+    public List<SkillMap> getSkillMaps(User requester) {
         List<SkillMapMembership> memberships = skillMapMembershipRepository.findByUserId(requester.getId());
         List<Long> skillMapIds = memberships.stream()
                 .map(SkillMapMembership::getSkillMapId)
@@ -68,8 +67,7 @@ public class SkillMapService {
     }
 
     // 202 - creates a skill map and auto-adds the creator as OWNER member
-    public SkillMap createSkillMap(SkillMap newSkillMap, String token) {
-        User owner = userService.getUserByToken(token);
+    public SkillMap createSkillMap(SkillMap newSkillMap, User owner) {
         if (newSkillMap.getTitle() == null || newSkillMap.getTitle().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required.");
         }
@@ -96,8 +94,7 @@ public class SkillMapService {
     }
 
     // 203 - access control: public maps are open to all, private maps require membership
-    public SkillMap getSkillMapById(Long skillMapId, String token) {
-        User requester = userService.getUserByToken(token);
+    public SkillMap getSkillMapById(Long skillMapId, User requester) {
         Optional<SkillMap> requestedSkillMap = skillMapRepository.findById(skillMapId);
 
         if (!requestedSkillMap.isPresent()) {
@@ -116,9 +113,8 @@ public class SkillMapService {
     }
 
     // 204 - only the owner can update; partial update (only non-null fields are applied)
-    public SkillMap updateSkillMap(Long skillMapId, SkillMap updates, String token) {
-        User requester = userService.getUserByToken(token);
-        SkillMap existing = getSkillMapById(skillMapId, token);
+    public SkillMap updateSkillMap(Long skillMapId, SkillMap updates, User requester) {
+        SkillMap existing = getSkillMapById(skillMapId, requester);
         checkIsOwner(existing, requester);
 
         if (updates.getTitle() != null) {
@@ -143,8 +139,7 @@ public class SkillMapService {
     }
 
     // 205 - only the owner can delete; memberships are cleaned up first
-    public void deleteSkillMap(Long skillMapId, String token) {
-        User requester = userService.getUserByToken(token);
+    public void deleteSkillMap(Long skillMapId, User requester) {
         Optional<SkillMap> mapOpt = skillMapRepository.findById(skillMapId);
         if (!mapOpt.isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -163,8 +158,7 @@ public class SkillMapService {
     }
 
     // 206 - join a skillmap via invite code
-    public SkillMapMembership joinSkillMap(Long skillMapId, String inviteCode, String token) {
-        User requester = userService.getUserByToken(token);
+    public SkillMapMembership joinSkillMap(Long skillMapId, String inviteCode, User requester) {
 
         SkillMap map = skillMapRepository.findById(skillMapId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -195,8 +189,8 @@ public class SkillMapService {
     }
 
     // 207 - returns all members; access is checked via getSkillMapById
-    public List<User> getMembers(Long skillMapId, String token) {
-        SkillMap map = getSkillMapById(skillMapId, token);
+    public List<User> getMembers(Long skillMapId, User requester) {
+        SkillMap map = getSkillMapById(skillMapId, requester);
         List<SkillMapMembership> memberships = skillMapMembershipRepository.findBySkillMapId(map.getId());
         List<User> members = new ArrayList<>();
         for (SkillMapMembership membership : memberships) {
@@ -206,8 +200,7 @@ public class SkillMapService {
     }
 
     // 208 - owner or the affected member themselves can remove a membership (spec 208.2)
-    public void removeMember(Long skillMapId, Long userId, String token) {
-        User requester = userService.getUserByToken(token);
+    public void removeMember(Long skillMapId, Long userId, User requester) {
         Optional<SkillMap> mapOpt = skillMapRepository.findById(skillMapId);
         if (!mapOpt.isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -233,8 +226,8 @@ public class SkillMapService {
     }
 
     // 209 - stub: returns skillmap metadata; skills/deps/progress added once those entities exist
-    public SkillMapGraphDTO getSkillMapGraph(Long skillMapId, String token) {
-        SkillMap map = getSkillMapById(skillMapId, token);
+    public SkillMapGraphDTO getSkillMapGraph(Long skillMapId, User requester) {
+        SkillMap map = getSkillMapById(skillMapId, requester);
         
         List<SkillGetDTO> skillDTOs = skillRepository.findBySkillMap(map)
                 .stream()

@@ -80,7 +80,9 @@ public class UserControllerTest {
 		return userPatchDTO;
 	}
 
-	// mock User authentication
+	// AuthInterceptor runs before every protected request and calls userService.getUserByToken().
+	// This mock makes the interceptor pass and sets the resolved user as a request attribute,
+	// which the controller then reads. UserService itself is not used by the controller directly.
 	private void mockUserAuthentication(User user, boolean success) {
 		if (success) {
 			given(userService.getUserByToken(any())).willReturn(user);
