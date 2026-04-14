@@ -4,7 +4,7 @@ public class UserPutAvatarDTO {
 
     private String style;
 
-    private String Seed;
+    private String seed;
 
     public String getStyle() {
         return style;
@@ -15,11 +15,11 @@ public class UserPutAvatarDTO {
     }
 
     public String getSeed() {
-        return Seed;
+        return seed;
     }
 
-    public void setSeed(String Seed) {
-        this.Seed = Seed;
+    public void setSeed(String seed) {
+        this.seed = seed;
     }
 
 }
