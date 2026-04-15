@@ -232,10 +232,9 @@ public class SkillMapControllerTest {
     public void givenValidInviteCode_whenJoinSkillMap_thenReturnCreated() throws Exception {
         mockAuthentication(buildUser(), true);
         SkillMapMembership membership = new SkillMapMembership();
-        given(skillMapService.joinSkillMap(any(), any(), any())).willReturn(membership);
+        given(skillMapService.joinSkillMap(any(), any())).willReturn(membership);
 
         SkillMapJoinDTO dto = new SkillMapJoinDTO();
-        dto.setSkillMapId(1L);
         dto.setInviteCode("VALIDCODE1");
 
         mockMvc.perform(post("/skillmaps/join")
@@ -249,11 +248,10 @@ public class SkillMapControllerTest {
     @Test
     public void givenWrongInviteCode_whenJoinSkillMap_thenReturnForbidden() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(skillMapService.joinSkillMap(any(), any(), any()))
+        given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
 
         SkillMapJoinDTO dto = new SkillMapJoinDTO();
-        dto.setSkillMapId(1L);
         dto.setInviteCode("WRONGCODE1");
 
         mockMvc.perform(post("/skillmaps/join")
@@ -267,11 +265,10 @@ public class SkillMapControllerTest {
     @Test
     public void givenUserAlreadyMember_whenJoinSkillMap_thenReturnConflict() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(skillMapService.joinSkillMap(any(), any(), any()))
+        given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.CONFLICT));
 
         SkillMapJoinDTO dto = new SkillMapJoinDTO();
-        dto.setSkillMapId(1L);
         dto.setInviteCode("VALIDCODE1");
 
         mockMvc.perform(post("/skillmaps/join")
@@ -285,11 +282,10 @@ public class SkillMapControllerTest {
     @Test
     public void givenNonExistentSkillMapId_whenJoinSkillMap_thenReturnNotFound() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(skillMapService.joinSkillMap(any(), any(), any()))
+        given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         SkillMapJoinDTO dto = new SkillMapJoinDTO();
-        dto.setSkillMapId(999L);
         dto.setInviteCode("anycode");
 
         mockMvc.perform(post("/skillmaps/join")

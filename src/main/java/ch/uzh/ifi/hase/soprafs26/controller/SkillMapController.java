@@ -16,7 +16,6 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
-import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.SkillMapService;
 
@@ -85,7 +84,7 @@ public class SkillMapController {
     @ResponseStatus(HttpStatus.CREATED)
     public SkillMapMembershipGetDTO joinSkillMap(@RequestBody SkillMapJoinDTO joinDTO, HttpServletRequest request) {
         User requester = (User) request.getAttribute("authenticatedUser");
-        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getSkillMapId(), joinDTO.getInviteCode(), requester);
+        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getInviteCode(), requester);
         return DTOMapper.INSTANCE.convertEntityToSkillMapMembershipGetDTO(membership);
     }
 

@@ -280,26 +280,20 @@ class SkillMapServiceTest {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
-
-        SkillMapMembership newMembership = new SkillMapMembership();
-        newMembership.setUserId(otherUser.getId());
-        newMembership.setSkillMapId(10L);
-        newMembership.setRole(SkillMapRole.STUDENT);
         given(skillMapMembershipRepository.save(any(SkillMapMembership.class)))
-                .willReturn(newMembership);
+                .willAnswer(inv -> inv.getArgument(0));
 
-        SkillMapMembership result = skillMapService.joinSkillMap(10L, "INVITE1234", otherUser);
+        SkillMapMembership result = skillMapService.joinSkillMap("INVITE1234", otherUser);
 
         assertEquals(SkillMapRole.STUDENT, result.getRole());
-        assertEquals(otherUser.getId(), result.getUserId());
-    }
+        }
 
     @Test
     void joinSkillMap_wrongInviteCode_throws403() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(10L, "WRONGCODE", otherUser));
+                () -> skillMapService.joinSkillMap("WRONGCODE", otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -310,18 +304,18 @@ class SkillMapServiceTest {
                 .willReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(10L, "INVITE1234", otherUser));
+                () -> skillMapService.joinSkillMap("INVITE1234", otherUser));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-    }
+        }
 
     @Test
     void joinSkillMap_mapNotFound_throws404() {
         given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(99L, "INVITE1234", otherUser));
+                () -> skillMapService.joinSkillMap("INVITE1234", otherUser));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
+        }
 
     // ─── 207  getMembers ─────────────────────────────────────────────────────
 

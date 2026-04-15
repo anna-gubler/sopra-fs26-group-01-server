@@ -1,8 +1,8 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -33,7 +33,6 @@ public class SkillMapService {
 
     private final SkillMapRepository skillMapRepository;
     private final SkillMapMembershipRepository skillMapMembershipRepository;
-    private final UserService userService;
     private final SkillRepository skillRepository;
     private final DependencyRepository dependencyRepository;
 
@@ -41,11 +40,9 @@ public class SkillMapService {
             @Qualifier("skillMapRepository") SkillMapRepository skillMapRepository,
             @Qualifier("skillRepository") SkillRepository skillRepository,
             @Qualifier("skillMapMembershipRepository") SkillMapMembershipRepository skillMapMembershipRepository,
-            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository,
-            UserService userService) {
+            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository) {
         this.skillMapRepository = skillMapRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
-        this.userService = userService;
         this.skillRepository = skillRepository;
         this.dependencyRepository = dependencyRepository;
     }
@@ -77,7 +74,11 @@ public class SkillMapService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "numberOfLevels must be at least 1.");
         }
         newSkillMap.setOwnerId(owner.getId());
-        newSkillMap.setInviteCode(generateInviteCode());
+        String inviteCode;
+        do {
+            inviteCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        } while (skillMapRepository.existsByInviteCode(inviteCode));
+        newSkillMap.setInviteCode(inviteCode);
         newSkillMap = skillMapRepository.save(newSkillMap);
         skillMapRepository.flush();
 
@@ -157,33 +158,27 @@ public class SkillMapService {
     }
 
     // 206 - join a skillmap via invite code
-    public SkillMapMembership joinSkillMap(Long skillMapId, String inviteCode, User requester) {
-
-        SkillMap map = skillMapRepository.findById(skillMapId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        String.format("The SkillMap with the ID %s could not be found.", skillMapId)));
+    public SkillMapMembership joinSkillMap(String inviteCode, User requester) {
 
         if (inviteCode == null || inviteCode.isBlank()) {
-            if (!map.getIsPublic()) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Skillmap is private and requires an invite code.");
-            }
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "inviteCode is required.");
         }
-        if (!map.getInviteCode().equals(inviteCode)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invite code is invalid.");
-        }
-        if (skillMapMembershipRepository.existsBySkillMapIdAndUserId(skillMapId, requester.getId())) {
+
+        SkillMap map = skillMapRepository.findByInviteCode(inviteCode)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code is invalid."));
+
+        if (skillMapMembershipRepository.existsBySkillMapIdAndUserId(map.getId(), requester.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member of this skillmap.");
         }
 
         SkillMapMembership membership = new SkillMapMembership();
         membership.setUserId(requester.getId());
-        membership.setSkillMapId(skillMapId);
+        membership.setSkillMapId(map.getId());
         membership.setRole(SkillMapRole.STUDENT);
         skillMapMembershipRepository.save(membership);
         skillMapMembershipRepository.flush();
 
-        log.debug("User {} joined SkillMap {}", requester.getId(), skillMapId);
+        log.debug("User {} joined SkillMap {}", requester.getId(), map.getId());
         return membership;
     }
 
@@ -242,19 +237,5 @@ public class SkillMapService {
         graph.setSkills(skillDTOs);
         graph.setDependencies(dependencyDTOs);
         return graph;
-    }
-
-    SecureRandom random = new SecureRandom();
-    private String generateInviteCode() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        String code;
-        do {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 10; i++) {
-                sb.append(chars.charAt(random.nextInt(chars.length())));
-            }
-            code = sb.toString();
-        } while (skillMapRepository.existsByInviteCode(code));
-        return code;
     }
 }
