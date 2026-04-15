@@ -160,6 +160,7 @@ public class SkillMapService {
     // 206 - join a skillmap via invite code
     public SkillMapMembership joinSkillMap(String inviteCode, User requester) {
 
+
         if (inviteCode == null || inviteCode.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "inviteCode is required.");
         }

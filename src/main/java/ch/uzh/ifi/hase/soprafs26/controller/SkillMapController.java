@@ -99,6 +99,7 @@ public class SkillMapController {
             .toList();
     }
 
+
     // 208 - DELETE /skillmaps/{skillMapId}/members/{userId}
     @DeleteMapping("/{skillMapId}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

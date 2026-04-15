@@ -40,6 +40,9 @@ public class SkillMapControllerTest {
     @MockitoBean
     private SkillMapService skillMapService;
 
+    // AuthInterceptor runs before every protected request and calls userService.getUserByToken().
+    // This bean must be present so the interceptor can be wired up in the test context.
+    // The controller itself does not use UserService directly.
     @MockitoBean
     private UserService userService;
 
