@@ -75,7 +75,7 @@ class SkillServiceIntegrationTest {
         input.setName("Loops");
         input.setLevel(1);
 
-        Skill result = skillService.createSkill(skillMap.getId(), input, owner.getToken());
+        Skill result = skillService.createSkill(skillMap.getId(), input, owner);
 
         assertNotNull(result.getId());
         assertEquals("Loops", result.getName());
@@ -88,21 +88,33 @@ class SkillServiceIntegrationTest {
         Skill input = new Skill();
         input.setName("ToDelete");
         input.setLevel(1);
-        Skill saved = skillService.createSkill(skillMap.getId(), input, owner.getToken());
+        Skill saved = skillService.createSkill(skillMap.getId(), input, owner);
 
-        skillService.deleteSkill(saved.getId(), owner.getToken());
+        skillService.deleteSkill(saved.getId(), owner);
 
         assertFalse(skillRepository.findById(saved.getId()).isPresent());
     }
 
     @Test
-    void createSkill_wrongToken_notPersisted() {
+    void createSkill_nonOwner_notPersisted() {
+        User nonOwner = new User();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        nonOwner.setUsername("nonowner-" + suffix);
+        nonOwner.setPassword("password");
+        nonOwner.setToken(UUID.randomUUID().toString());
+        nonOwner.setStatus(UserStatus.ONLINE);
+        nonOwner.setSeed("seed123");
+        nonOwner.setStyle("avataaars");
+        nonOwner.setCreationDate(LocalDateTime.now());
+        userRepository.save(nonOwner);
+        userRepository.flush();
+
         Skill input = new Skill();
         input.setName("ShouldNotExist");
         input.setLevel(1);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(skillMap.getId(), input, "wrong-token"));
+                () -> skillService.createSkill(skillMap.getId(), input, nonOwner));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         assertEquals(0, skillRepository.findBySkillMap(skillMap).size());

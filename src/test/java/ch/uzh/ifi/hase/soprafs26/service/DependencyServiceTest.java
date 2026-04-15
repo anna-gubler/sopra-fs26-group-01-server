@@ -8,21 +8,20 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import ch.uzh.ifi.hase.soprafs26.entity.*;
 import ch.uzh.ifi.hase.soprafs26.repository.*;
 
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class DependencyServiceTest {
 
     @Mock private SkillMapRepository skillMapRepository;
     @Mock private SkillMapMembershipRepository skillMapMembershipRepository;
-    @Mock private UserRepository userRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private DependencyRepository dependencyRepository;
 
@@ -30,6 +29,7 @@ class DependencyServiceTest {
     private DependencyService dependencyService;
 
     private User owner;
+    private User otherUser;
     private SkillMap skillMap;
     private Skill fromSkill;
     private Skill toSkill;
@@ -37,11 +37,11 @@ class DependencyServiceTest {
 
     @BeforeEach
     void setup() {
-        MockitoAnnotations.openMocks(this);
-
         owner = new User();
         owner.setId(1L);
-        owner.setToken("owner-token");
+
+        otherUser = new User();
+        otherUser.setId(2L);
 
         skillMap = new SkillMap();
         skillMap.setId(10L);
@@ -63,16 +63,14 @@ class DependencyServiceTest {
         dependency.setToSkill(toSkill);
     }
 
-    // getDependenciesByMap 
+    // getDependenciesByMap
     @Test
     void getDependenciesByMap_validOwner_returnsList() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
-        when(skillMapMembershipRepository.findBySkillMapId(10L)).thenReturn(List.of());
         when(skillRepository.findBySkillMap(skillMap)).thenReturn(List.of(fromSkill, toSkill));
         when(dependencyRepository.findByFromSkill_IdIn(List.of(100L, 200L))).thenReturn(List.of(dependency));
 
-        List<Dependency> result = dependencyService.getDependenciesByMap(10L, "owner-token");
+        List<Dependency> result = dependencyService.getDependenciesByMap(10L, owner);
 
         assertEquals(1, result.size());
         assertEquals(dependency, result.get(0));
@@ -83,30 +81,28 @@ class DependencyServiceTest {
         when(skillMapRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.getDependenciesByMap(99L, "owner-token"));
+            () -> dependencyService.getDependenciesByMap(99L, owner));
     }
 
     @Test
     void getDependenciesByMap_notOwnerNotMember_throws403() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
-        when(skillMapMembershipRepository.findBySkillMapId(10L)).thenReturn(List.of());
+        when(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).thenReturn(false);
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.getDependenciesByMap(10L, "wrong-token"));
+            () -> dependencyService.getDependenciesByMap(10L, otherUser));
     }
 
-    // createDependency 
+    // createDependency
     @Test
     void createDependency_valid_returnsSaved() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
         when(skillRepository.findById(200L)).thenReturn(Optional.of(toSkill));
         when(dependencyRepository.findByFromSkill(fromSkill)).thenReturn(List.of());
         when(dependencyRepository.save(any())).thenReturn(dependency);
 
-        Dependency result = dependencyService.createDependency(10L, 100L, 200L, "owner-token");
+        Dependency result = dependencyService.createDependency(10L, 100L, 200L, owner);
 
         assertNotNull(result);
         assertEquals(fromSkill, result.getFromSkill());
@@ -116,10 +112,9 @@ class DependencyServiceTest {
     @Test
     void createDependency_notOwner_throws403() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.createDependency(10L, 100L, 200L, "wrong-token"));
+            () -> dependencyService.createDependency(10L, 100L, 200L, otherUser));
     }
 
     @Test
@@ -127,54 +122,48 @@ class DependencyServiceTest {
         toSkill.setLevel(1); // same level as fromSkill
 
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
         when(skillRepository.findById(200L)).thenReturn(Optional.of(toSkill));
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.createDependency(10L, 100L, 200L, "owner-token"));
+            () -> dependencyService.createDependency(10L, 100L, 200L, owner));
     }
 
     @Test
     void createDependency_recursive_throws400() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
-        when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill)); // same skill
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.createDependency(10L, 100L, 100L, "owner-token"));
+            () -> dependencyService.createDependency(10L, 100L, 100L, owner));
     }
 
     @Test
     void createDependency_alreadyExists_throws409() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
         when(skillRepository.findById(200L)).thenReturn(Optional.of(toSkill));
         when(dependencyRepository.findByFromSkill(fromSkill)).thenReturn(List.of(dependency));
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.createDependency(10L, 100L, 200L, "owner-token"));
+            () -> dependencyService.createDependency(10L, 100L, 200L, owner));
     }
 
     @Test
     void createDependency_skillNotFound_throws404() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(skillRepository.findById(100L)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.createDependency(10L, 100L, 200L, "owner-token"));
+            () -> dependencyService.createDependency(10L, 100L, 200L, owner));
     }
 
-    // deleteDependency 
+    // deleteDependency
     @Test
     void deleteDependency_validOwner_deletesSuccessfully() {
         when(dependencyRepository.findById(1000L)).thenReturn(Optional.of(dependency));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
-        assertDoesNotThrow(() -> dependencyService.deleteDependency(1000L, "owner-token"));
+        assertDoesNotThrow(() -> dependencyService.deleteDependency(1000L, owner));
         verify(dependencyRepository, times(1)).delete(dependency);
     }
 
@@ -183,15 +172,14 @@ class DependencyServiceTest {
         when(dependencyRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.deleteDependency(99L, "owner-token"));
+            () -> dependencyService.deleteDependency(99L, owner));
     }
 
     @Test
     void deleteDependency_notOwner_throws403() {
         when(dependencyRepository.findById(1000L)).thenReturn(Optional.of(dependency));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
         assertThrows(ResponseStatusException.class,
-            () -> dependencyService.deleteDependency(1000L, "wrong-token"));
+            () -> dependencyService.deleteDependency(1000L, otherUser));
     }
 }

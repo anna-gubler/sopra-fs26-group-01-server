@@ -54,7 +54,6 @@ public class SkillMapControllerTest {
     // AuthInterceptor runs before every protected request and calls userService.getUserByToken().
     // This mock makes the interceptor pass and sets the resolved user as a request attribute,
     // which the controller then reads. UserService itself is not used by the controller directly.
-    // Unauthorized tests simply omit the Authorization header — no mock needed for those.
     private void mockAuthentication(User user, boolean success) {
         if (success) {
             given(userService.getUserByToken(any())).willReturn(user);
