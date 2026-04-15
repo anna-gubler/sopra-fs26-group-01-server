@@ -334,7 +334,7 @@ class SkillMapServiceTest {
                 .willReturn(List.of(ownerMembership));
         given(userService.getUserById(owner.getId())).willReturn(owner);
 
-        List<User> result = skillMapService.getMembers(10L, owner);
+        List<SkillMapMembership> result = skillMapService.getMembers(10L, owner);
 
         assertEquals(1, result.size());
         assertEquals(owner.getId(), result.get(0).getId());

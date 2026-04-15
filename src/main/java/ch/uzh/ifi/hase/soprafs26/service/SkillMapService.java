@@ -1,7 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -189,14 +188,9 @@ public class SkillMapService {
     }
 
     // 207 - returns all members; access is checked via getSkillMapById
-    public List<User> getMembers(Long skillMapId, User requester) {
+    public List<SkillMapMembership> getMembers(Long skillMapId, User requester) {
         SkillMap map = getSkillMapById(skillMapId, requester);
-        List<SkillMapMembership> memberships = skillMapMembershipRepository.findBySkillMapId(map.getId());
-        List<User> members = new ArrayList<>();
-        for (SkillMapMembership membership : memberships) {
-            members.add(userService.getUserById(membership.getUserId()));
-        }
-        return members;
+        return skillMapMembershipRepository.findBySkillMapId(map.getId());
     }
 
     // 208 - owner or the affected member themselves can remove a membership (spec 208.2)
