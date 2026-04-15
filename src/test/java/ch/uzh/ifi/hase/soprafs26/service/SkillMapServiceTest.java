@@ -332,13 +332,12 @@ class SkillMapServiceTest {
                 .willReturn(true);
         given(skillMapMembershipRepository.findBySkillMapId(10L))
                 .willReturn(List.of(ownerMembership));
-        given(userService.getUserById(owner.getId())).willReturn(owner);
 
         List<SkillMapMembership> result = skillMapService.getMembers(10L, owner);
 
         assertEquals(1, result.size());
-        assertEquals(owner.getId(), result.get(0).getId());
-    }
+        assertEquals(ownerMembership.getId(), result.get(0).getId());
+        }
 
     // ─── 208  removeMember ───────────────────────────────────────────────────
 
