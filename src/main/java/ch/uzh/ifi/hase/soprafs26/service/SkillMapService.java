@@ -195,14 +195,9 @@ public class SkillMapService {
     }
 
     // 207 - returns all members; access is checked via getSkillMapById
-    public List<User> getMembers(Long skillMapId, String token) {
+    public List<SkillMapMembership> getMembers(Long skillMapId, String token) {
         SkillMap map = getSkillMapById(skillMapId, token);
-        List<SkillMapMembership> memberships = skillMapMembershipRepository.findBySkillMapId(map.getId());
-        List<User> members = new ArrayList<>();
-        for (SkillMapMembership membership : memberships) {
-            members.add(userService.getUserById(membership.getUserId()));
-        }
-        return members;
+        return skillMapMembershipRepository.findBySkillMapId(map.getId());
     }
 
     // 208 - owner or the affected member themselves can remove a membership (spec 208.2)

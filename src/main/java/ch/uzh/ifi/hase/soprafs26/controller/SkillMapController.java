@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
-import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO;
@@ -15,7 +14,6 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
-import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.SkillMapService;
 
@@ -91,14 +89,12 @@ public class SkillMapController {
     // 207 - GET /skillmaps/{skillMapId}/members
     @GetMapping("/{skillMapId}/members")
     @ResponseStatus(HttpStatus.OK)
-    public List<UserGetDTO> getMembers(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
+    public List<SkillMapMembershipGetDTO> getMembers(@PathVariable Long skillMapId, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring("Bearer ".length()).trim();
-        List<User> members = skillMapService.getMembers(skillMapId, token);
-        List<UserGetDTO> memberDTOs = new ArrayList<>();
-        for (User member : members) {
-            memberDTOs.add(DTOMapper.INSTANCE.convertEntityToUserGetDTO(member));
-        }
-        return memberDTOs;
+        return skillMapService.getMembers(skillMapId, token)
+            .stream()
+            .map(DTOMapper.INSTANCE::convertEntityToSkillMapMembershipGetDTO)
+            .toList();
     }
 
     // 208 - DELETE /skillmaps/{skillMapId}/members/{userId}
