@@ -295,57 +295,51 @@ class SkillMapServiceTest {
 
     // ─── 206  joinSkillMap ────────────────────────────────────────────────────
 
-    @Test
-    void joinSkillMap_validInviteCode_createsMembership() {
+        @Test
+        void joinSkillMap_validInviteCode_createsMembership() {
         given(userService.getUserByToken("other-token")).willReturn(otherUser);
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
-
-        SkillMapMembership newMembership = new SkillMapMembership();
-        newMembership.setUserId(otherUser.getId());
-        newMembership.setSkillMapId(10L);
-        newMembership.setRole(SkillMapRole.STUDENT);
         given(skillMapMembershipRepository.save(any(SkillMapMembership.class)))
-                .willReturn(newMembership);
+                .willAnswer(inv -> inv.getArgument(0));
 
-        SkillMapMembership result = skillMapService.joinSkillMap(10L, "INVITE1234", "other-token");
+        SkillMapMembership result = skillMapService.joinSkillMap("INVITE1234", "other-token");
 
         assertEquals(SkillMapRole.STUDENT, result.getRole());
-        assertEquals(otherUser.getId(), result.getUserId());
-    }
+        }
 
-    @Test
-    void joinSkillMap_wrongInviteCode_throws403() {
+        @Test
+        void joinSkillMap_wrongInviteCode_throws404() {
         given(userService.getUserByToken("other-token")).willReturn(otherUser);
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapRepository.findByInviteCode("WRONGCODE")).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(10L, "WRONGCODE", "other-token"));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-    }
+                () -> skillMapService.joinSkillMap("WRONGCODE", "other-token"));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        }
 
-    @Test
-    void joinSkillMap_alreadyMember_throws409() {
+        @Test
+        void joinSkillMap_alreadyMember_throws409() {
         given(userService.getUserByToken("other-token")).willReturn(otherUser);
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(10L, "INVITE1234", "other-token"));
+                () -> skillMapService.joinSkillMap("INVITE1234", "other-token"));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-    }
+        }
 
-    @Test
-    void joinSkillMap_mapNotFound_throws404() {
+        @Test
+        void joinSkillMap_mapNotFound_throws404() {
         given(userService.getUserByToken("other-token")).willReturn(otherUser);
-        given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap(99L, "INVITE1234", "other-token"));
+                () -> skillMapService.joinSkillMap("INVITE1234", "other-token"));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
+        }
 
     // ─── 207  getMembers ─────────────────────────────────────────────────────
 

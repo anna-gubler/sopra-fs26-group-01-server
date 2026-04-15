@@ -107,9 +107,8 @@ class SkillMapServiceIntegrationTest {
     @Test
     void joinSkillMap_withValidInviteCode_createsMembershipWithStudentRole() {
         SkillMapMembership membership = skillMapService.joinSkillMap(
-                skillMap.getId(), skillMap.getInviteCode(), student.getToken());
+                skillMap.getInviteCode(), student.getToken());
 
-        assertNotNull(membership.getId());
         assertEquals(student.getId(), membership.getUserId());
         assertEquals(skillMap.getId(), membership.getSkillMapId());
         assertEquals(SkillMapRole.STUDENT, membership.getRole());
@@ -117,28 +116,27 @@ class SkillMapServiceIntegrationTest {
 
     @Test
     void joinSkillMap_withValidInviteCode_skillMapAppearsInStudentsMapList() {
-        skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
+        skillMapService.joinSkillMap(skillMap.getInviteCode(), student.getToken());
 
         List<SkillMap> maps = skillMapService.getSkillMaps(student.getToken());
 
         assertEquals(1, maps.size());
-        assertEquals(skillMap.getId(), maps.get(0).getId());
     }
 
     @Test
-    void joinSkillMap_withWrongInviteCode_throwsForbidden() {
+    void joinSkillMap_withWrongInviteCode_notFound() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.joinSkillMap(skillMap.getId(), "WRONGCODE1", student.getToken()));
+                skillMapService.joinSkillMap("WRONGCODE1", student.getToken()));
 
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
     void joinSkillMap_whenStudentAlreadyMember_throwsConflict() {
-        skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken());
+        skillMapService.joinSkillMap(skillMap.getInviteCode(), student.getToken());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), student.getToken()));
+                skillMapService.joinSkillMap(skillMap.getInviteCode(), student.getToken()));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
@@ -146,7 +144,7 @@ class SkillMapServiceIntegrationTest {
     @Test
     void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.joinSkillMap(999999L, "anycode", student.getToken()));
+                skillMapService.joinSkillMap("anycode", student.getToken()));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
@@ -154,7 +152,7 @@ class SkillMapServiceIntegrationTest {
     @Test
     void joinSkillMap_whenOwnerTriesToJoinOwnMap_throwsConflict() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.joinSkillMap(skillMap.getId(), skillMap.getInviteCode(), owner.getToken()));
+                skillMapService.joinSkillMap(skillMap.getInviteCode(), owner.getToken()));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }

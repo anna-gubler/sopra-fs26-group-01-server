@@ -82,7 +82,7 @@ public class SkillMapController {
     @ResponseStatus(HttpStatus.CREATED)
     public SkillMapMembershipGetDTO joinSkillMap(@RequestBody SkillMapJoinDTO joinDTO, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring("Bearer ".length()).trim();
-        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getSkillMapId(), joinDTO.getInviteCode(), token);
+        SkillMapMembership membership = skillMapService.joinSkillMap(joinDTO.getInviteCode(), token);
         return DTOMapper.INSTANCE.convertEntityToSkillMapMembershipGetDTO(membership);
     }
 
