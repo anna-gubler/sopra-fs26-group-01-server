@@ -166,7 +166,7 @@ public class SkillMapService {
         }
 
         SkillMap map = skillMapRepository.findByInviteCode(inviteCode)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code is invalid."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invite code is invalid."));
 
         if (skillMapMembershipRepository.existsBySkillMapIdAndUserId(map.getId(), requester.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member of this skillmap.");

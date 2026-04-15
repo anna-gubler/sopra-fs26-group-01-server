@@ -124,11 +124,11 @@ class SkillMapServiceIntegrationTest {
     }
 
     @Test
-    void joinSkillMap_withWrongInviteCode_notFound() {
+    void joinSkillMap_withWrongInviteCode_Forbidden() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap("WRONGCODE1", student));
 
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
     @Test
@@ -139,14 +139,6 @@ class SkillMapServiceIntegrationTest {
                 skillMapService.joinSkillMap(skillMap.getInviteCode(), student));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-    }
-
-    @Test
-    void joinSkillMap_withNonExistentSkillMapId_throwsNotFound() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.joinSkillMap("anycode", student));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test

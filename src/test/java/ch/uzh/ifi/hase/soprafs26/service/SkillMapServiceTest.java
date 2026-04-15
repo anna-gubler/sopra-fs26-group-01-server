@@ -277,7 +277,7 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_validInviteCode_createsMembership() {
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(false);
         given(skillMapMembershipRepository.save(any(SkillMapMembership.class)))
@@ -290,8 +290,6 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_wrongInviteCode_throws403() {
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> skillMapService.joinSkillMap("WRONGCODE", otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
@@ -299,22 +297,13 @@ class SkillMapServiceTest {
 
     @Test
     void joinSkillMap_alreadyMember_throws409() {
-        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
                 .willReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> skillMapService.joinSkillMap("INVITE1234", otherUser));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-        }
-
-    @Test
-    void joinSkillMap_mapNotFound_throws404() {
-        given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.joinSkillMap("INVITE1234", otherUser));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         }
 
     // ─── 207  getMembers ─────────────────────────────────────────────────────
