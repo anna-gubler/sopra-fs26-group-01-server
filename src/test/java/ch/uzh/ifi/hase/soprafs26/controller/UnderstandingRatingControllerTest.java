@@ -28,9 +28,6 @@ public class UnderstandingRatingControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UnderstandingRatingService ratingService;
-    // AuthInterceptor runs before every protected request and calls userService.getUserByToken().
-    // Stubbing it in each test makes the interceptor pass and sets the resolved user as a request
-    // attribute, which the controller then reads. UserService itself is not used by the controller directly.
     @MockitoBean private UserService userService;
 
     private static final Long SESSION_ID = 1L;
