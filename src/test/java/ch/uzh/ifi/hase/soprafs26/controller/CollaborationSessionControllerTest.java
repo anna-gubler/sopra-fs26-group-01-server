@@ -56,9 +56,12 @@ public class CollaborationSessionControllerTest {
         return session;
     }
 
-    private void mockGetUserByToken(boolean success) {
+    // AuthInterceptor runs before every protected request and calls userService.getUserByToken().
+    // This mock makes the interceptor pass and sets the resolved user as a request attribute,
+    // which the controller then reads. UserService itself is not used by the controller directly.
+    private void mockAuthentication(User user, boolean success) {
         if (success) {
-            given(userService.getUserByToken(any())).willReturn(buildUser());
+            given(userService.getUserByToken(any())).willReturn(user);
         }
     }
 
@@ -66,7 +69,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenValidOwner_whenStartSession_thenReturnCreated() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.startSession(eq(SKILL_MAP_ID), any())).willReturn(buildActiveSession());
 
         MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
@@ -80,7 +83,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNonOwner_whenStartSession_thenReturnForbidden() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.startSession(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can start a session"));
 
@@ -94,7 +97,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNonExistingSkillMap_whenStartSession_thenReturnNotFound() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.startSession(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
@@ -108,7 +111,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenAlreadyActiveSession_whenStartSession_thenReturnConflict() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.startSession(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "A session is already active"));
 
@@ -122,7 +125,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNoAuthorization_whenStartSession_thenReturnUnauthorized() throws Exception {
-        mockGetUserByToken(false);
+        mockAuthentication(buildUser(), false);
 
         MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
                 .contentType(MediaType.APPLICATION_JSON);
@@ -135,7 +138,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenActiveSession_whenGetActiveSession_thenReturnOk() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any())).willReturn(buildActiveSession());
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
@@ -149,7 +152,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNoActiveSession_whenGetActiveSession_thenReturnNotFound() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session"));
 
@@ -163,7 +166,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNonMember_whenGetActiveSession_thenReturnForbidden() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this skill map"));
 
@@ -177,7 +180,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNoAuthorization_whenGetActiveSession_thenReturnUnauthorized() throws Exception {
-        mockGetUserByToken(false);
+        mockAuthentication(buildUser(), false);
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
                 .contentType(MediaType.APPLICATION_JSON);
@@ -190,7 +193,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenValidOwner_whenEndSession_thenReturnNoContent() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
 
         MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/active/end", SKILL_MAP_ID)
                 .header("Authorization", "Bearer " + TOKEN)
@@ -202,7 +205,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNonOwner_whenEndSession_thenReturnForbidden() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can end a session"))
                 .given(sessionService).endSession(eq(SKILL_MAP_ID), any());
 
@@ -216,7 +219,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNoAuthorization_whenEndSession_thenReturnUnauthorized() throws Exception {
-        mockGetUserByToken(false);
+        mockAuthentication(buildUser(), false);
 
         MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/active/end", SKILL_MAP_ID)
                 .contentType(MediaType.APPLICATION_JSON);
@@ -227,7 +230,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNonExistingSkillMap_whenEndSession_thenReturnNotFound() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"))
                 .given(sessionService).endSession(eq(SKILL_MAP_ID), any());
 
@@ -241,7 +244,7 @@ public class CollaborationSessionControllerTest {
 
     @Test
     public void givenNoActiveSession_whenEndSession_thenReturnNotFound() throws Exception {
-        mockGetUserByToken(true);
+        mockAuthentication(buildUser(), true);
         willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"))
                 .given(sessionService).endSession(eq(SKILL_MAP_ID), any());
 

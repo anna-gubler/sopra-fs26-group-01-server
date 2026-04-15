@@ -80,8 +80,10 @@ public class UserControllerTest {
 		return userPatchDTO;
 	}
 
-	// mock User authentication
-	private void mockUserAuthentication(User user, boolean success) {
+	// AuthInterceptor runs before every protected request and calls userService.getUserByToken().
+	// This mock makes the interceptor pass and sets the resolved user as a request attribute,
+	// which the controller then reads. UserService itself is not used by the controller directly.
+	private void mockAuthentication(User user, boolean success) {
 		if (success) {
 			given(userService.getUserByToken(any())).willReturn(user);
 		}
@@ -204,7 +206,7 @@ public class UserControllerTest {
 	@Test
 	public void givenValidAuthentication_whenAuthLogout_thenReturnNoContent() throws Exception {
 		User logoutUser = newUser();
-		mockUserAuthentication(logoutUser, true);
+		mockAuthentication(logoutUser, true);
 
 		MockHttpServletRequestBuilder postRequest = post("/auth/logout")
 				.header("Authorization", "Bearer " + TOKEN)
@@ -218,7 +220,7 @@ public class UserControllerTest {
 			// mockUserAuthentication (and not in logoutUser)
 	public void givenInvalidAuthentication_whenAuthLogout_thenReturnUnauthorized() throws Exception {
 		User logoutUser = newUser();
-		mockUserAuthentication(logoutUser, false);
+		mockAuthentication(logoutUser, false);
 
 		MockHttpServletRequestBuilder postRequest = post("/auth/logout")
 				.contentType(MediaType.APPLICATION_JSON);
@@ -230,7 +232,7 @@ public class UserControllerTest {
 	@Test
 	public void givenValidAuthentication_whenGetUsersMe_thenReturnUser() throws Exception {
 		User user = newUser();
-		mockUserAuthentication(user, true);
+		mockAuthentication(user, true);
 
 		MockHttpServletRequestBuilder getRequest = get("/users/me")
 				.header("Authorization", "Bearer " + TOKEN)
@@ -262,7 +264,7 @@ public class UserControllerTest {
 		updatedUser.setStatus(UserStatus.ONLINE);
 
 		// mocks
-		mockUserAuthentication(authUser, true);
+		mockAuthentication(authUser, true);
 		given(userService.changeUserInformation(any(User.class), any(User.class))).willReturn(updatedUser);
 
 		// request
@@ -280,7 +282,7 @@ public class UserControllerTest {
 	@Test
 	public void givenNoAuthorization_whenPatchUsersMe_thenReturnUnauthorized() throws Exception {
 		// Mock
-		mockUserAuthentication(newUser(), false);
+		mockAuthentication(newUser(), false);
 
 		MockHttpServletRequestBuilder patchRequest = patch("/users/me")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -292,7 +294,7 @@ public class UserControllerTest {
 
 	@Test
 	public void givenDuplicateUsername_whenPatchUsersMe_thenReturnConflict() throws Exception {
-		mockUserAuthentication(newUser(), true);
+		mockAuthentication(newUser(), true);
 
 		given(userService.changeUserInformation(any(User.class), any(User.class))).willThrow(
 				new ResponseStatusException(
@@ -309,7 +311,7 @@ public class UserControllerTest {
 
 	@Test
 	public void givenValidAuthentication_whenDeleteUsersMe_thenReturnNoContent() throws Exception {
-		mockUserAuthentication(newUser(), true);
+		mockAuthentication(newUser(), true);
 
 		MockHttpServletRequestBuilder deleteRequest = delete("/users/me")
 				.header("Authorization", "Bearer " + TOKEN)
@@ -322,7 +324,7 @@ public class UserControllerTest {
 
 	@Test
 	public void givenWrongPassword_whenDeleteUsersMe_thenReturnUnauthorized() throws Exception {
-		mockUserAuthentication(newUser(), true);
+		mockAuthentication(newUser(), true);
 
 		willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password"))
 				.given(userService).deleteUserProfile(any(User.class), eq(PASSWORD));
@@ -348,7 +350,7 @@ public class UserControllerTest {
 		requestedUser.setId(2L);
 
 		// mocks
-		mockUserAuthentication(authUser, true);
+		mockAuthentication(authUser, true);
 		given(userService.getUserById(2L)).willReturn(requestedUser);
 
 		// request
@@ -369,7 +371,7 @@ public class UserControllerTest {
 	@Test
 	public void givenNoAuthorization_whenGetUsersById_thenReturnUnauthorized() throws Exception {
 		// Mock
-		mockUserAuthentication(newUser(), false);
+		mockAuthentication(newUser(), false);
 
 		MockHttpServletRequestBuilder getRequest = get("/users/1");
 
@@ -386,7 +388,7 @@ public class UserControllerTest {
 		authUser.setToken(TOKEN);
 
 		// mocks
-		mockUserAuthentication(authUser, true);
+		mockAuthentication(authUser, true);
 
 		given(userService.getUserById(999L))
 				.willThrow(new ResponseStatusException(
@@ -422,7 +424,7 @@ public class UserControllerTest {
 
 	@Test
 	public void givenUser_whenChangeAvatar_thenSuccessful() throws Exception {
-		mockUserAuthentication(newUser(), true);
+		mockAuthentication(newUser(), true);
 
 		given(userService.changeUserAvatar(any(User.class), any(User.class))).willReturn(newUser());
 

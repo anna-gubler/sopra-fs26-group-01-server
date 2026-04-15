@@ -6,9 +6,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.*;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs26.service.DependencyService;
+import jakarta.servlet.http.HttpServletRequest;
 @RestController
 public class DependencyController {
 
@@ -23,9 +25,9 @@ public class DependencyController {
     @ResponseStatus(HttpStatus.OK)
     public List<DependencyGetDTO> getDependenciesByMap(
             @PathVariable Long skillMapId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        return dependencyService.getDependenciesByMap(skillMapId, token)
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return dependencyService.getDependenciesByMap(skillMapId, user)
             .stream()
             .map(DTOMapper.INSTANCE::convertDependencyEntityToGetDTO)
             .toList();
@@ -37,9 +39,9 @@ public class DependencyController {
     public DependencyGetDTO createDependency(
             @PathVariable Long skillMapId,
             @RequestBody DependencyPostDTO dependencyPostDTO,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        Dependency created = dependencyService.createDependency(skillMapId, dependencyPostDTO.getFromSkillId(), dependencyPostDTO.getToSkillId(), token);
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        Dependency created = dependencyService.createDependency(skillMapId, dependencyPostDTO.getFromSkillId(), dependencyPostDTO.getToSkillId(), user);
         return DTOMapper.INSTANCE.convertDependencyEntityToGetDTO(created);
     }
 
@@ -48,8 +50,8 @@ public class DependencyController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDependency(
             @PathVariable Long dependencyId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        dependencyService.deleteDependency(dependencyId, token);
+            HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        dependencyService.deleteDependency(dependencyId, user);
     }
 }

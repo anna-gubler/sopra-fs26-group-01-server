@@ -1,5 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.interceptor;
 
+import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,10 +20,6 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            return true;
-        }
-
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader == null || authorizationHeader.isBlank()) {
@@ -39,7 +36,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
         }
 
-        userService.getUserByToken(token); // throws 401 if token invalid or user not ONLINE
+        User user = userService.getUserByToken(token); // throws 401 if token invalid or user not ONLINE
+        request.setAttribute("authenticatedUser", user);
 
         return true; // proceed to controller
     }

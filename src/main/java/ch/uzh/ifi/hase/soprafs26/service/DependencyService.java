@@ -19,7 +19,6 @@ public class DependencyService {
 
     private final SkillMapRepository skillMapRepository;
     private final SkillMapMembershipRepository skillMapMembershipRepository;
-    private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final DependencyRepository dependencyRepository;
 
@@ -27,31 +26,22 @@ public class DependencyService {
             @Qualifier("skillMapRepository") SkillMapRepository skillMapRepository,
             @Qualifier("skillRepository") SkillRepository skillRepository,
             @Qualifier("skillMapMembershipRepository") SkillMapMembershipRepository skillMapMembershipRepository,
-            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository,
-            @Qualifier("userRepository") UserRepository userRepository) {
+            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository) {
         this.skillMapRepository = skillMapRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
         this.skillRepository = skillRepository;
         this.dependencyRepository = dependencyRepository;
-        this.userRepository = userRepository;
     }
 
     // 401 Get a list of all dependencies of one skillmap
-    public List<Dependency> getDependenciesByMap(Long skillMapId, String token) {
+    public List<Dependency> getDependenciesByMap(Long skillMapId, User user) {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
 
-        User owner = userRepository.findById(skillMap.getOwnerId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        boolean isOwner = user.getId().equals(skillMap.getOwnerId());
+        boolean isMember = skillMapMembershipRepository.existsBySkillMapIdAndUserId(skillMapId, user.getId());
 
-        boolean isMember = skillMapMembershipRepository
-            .findBySkillMapId(skillMapId)
-            .stream()
-            .anyMatch(m -> userRepository.findById(m.getUserId())
-                .map(u -> u.getToken().equals(token))
-                .orElse(false));
-
-        if (!owner.getToken().equals(token) && !isMember) {
+        if (!isOwner && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to this skillmap");
         }
 
@@ -63,64 +53,43 @@ public class DependencyService {
         return dependencyRepository.findByFromSkill_IdIn(skillIds);
     }
 
-    public List<Dependency> getFromDependenciesBySkill(Long skillId, String token) {
+    public List<Dependency> getFromDependenciesBySkill(Long skillId, User user) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
-        User owner = userRepository.findById(skill.getSkillMap().getOwnerId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        boolean isOwner = user.getId().equals(skill.getSkillMap().getOwnerId());
+        boolean isMember = skillMapMembershipRepository.existsBySkillMapIdAndUserId(skill.getSkillMap().getId(), user.getId());
 
-        boolean isMember = skillMapMembershipRepository
-            .findBySkillMapId(skill.getSkillMap().getId())
-            .stream()
-            .anyMatch(m -> userRepository.findById(m.getUserId())
-                .map(u -> u.getToken().equals(token))
-                .orElse(false));
-
-        if (!owner.getToken().equals(token) && !isMember) {
+        if (!isOwner && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to this skillmap");
         }
 
         return dependencyRepository.findByFromSkill(skill);
     }
 
-        
-    public List<Dependency> getToDependenciesBySkill(Long skillId, String token) {
+    public List<Dependency> getToDependenciesBySkill(Long skillId, User user) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
-        User owner = userRepository.findById(skill.getSkillMap().getOwnerId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        boolean isOwner = user.getId().equals(skill.getSkillMap().getOwnerId());
+        boolean isMember = skillMapMembershipRepository.existsBySkillMapIdAndUserId(skill.getSkillMap().getId(), user.getId());
 
-        boolean isMember = skillMapMembershipRepository
-            .findBySkillMapId(skill.getSkillMap().getId())
-            .stream()
-            .anyMatch(m -> userRepository.findById(m.getUserId())
-                .map(u -> u.getToken().equals(token))
-                .orElse(false));
-
-        if (!owner.getToken().equals(token) && !isMember) {
+        if (!isOwner && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to this skillmap");
         }
 
         return dependencyRepository.findByToSkill(skill);
     }
 
-    public Dependency getById(Long dependencyId, String token) {
+    public Dependency getById(Long dependencyId, User user) {
         Dependency dependency = dependencyRepository.findById(dependencyId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dependency not found"));
 
-        User owner = userRepository.findById(dependency.getFromSkill().getSkillMap().getOwnerId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
+        Long skillMapId = dependency.getFromSkill().getSkillMap().getId();
+        boolean isOwner = user.getId().equals(dependency.getFromSkill().getSkillMap().getOwnerId());
+        boolean isMember = skillMapMembershipRepository.existsBySkillMapIdAndUserId(skillMapId, user.getId());
 
-        boolean isMember = skillMapMembershipRepository
-            .findBySkillMapId(dependency.getFromSkill().getSkillMap().getId())
-            .stream()
-            .anyMatch(m -> userRepository.findById(m.getUserId())
-                .map(u -> u.getToken().equals(token))
-                .orElse(false));
-
-        if (!owner.getToken().equals(token) && !isMember) {
+        if (!isOwner && !isMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User has no access to this skillmap");
         }
 
@@ -128,15 +97,12 @@ public class DependencyService {
     }
 
     // 402 Create a new dependency
-    public Dependency createDependency(Long skillMapId, Long fromSkillId, Long toSkillId, String token) {
+    public Dependency createDependency(Long skillMapId, Long fromSkillId, Long toSkillId, User user) {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
 
-        User owner = userRepository.findById(skillMap.getOwnerId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
-        
         // 402.3
-        if (!owner.getToken().equals(token)) {
+        if (!user.getId().equals(skillMap.getOwnerId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the map owner can add dependencies");
         }
 
@@ -170,17 +136,12 @@ public class DependencyService {
         return dependencyRepository.save(newDependency);
     }
 
-
     // 403 Delete a dependency
-    public void deleteDependency(Long dependencyId, String token) {
+    public void deleteDependency(Long dependencyId, User user) {
         Dependency dependency = dependencyRepository.findById(dependencyId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dependency not found"));
 
-        Long ownerId = dependency.getFromSkill().getSkillMap().getOwnerId();
-        User owner = userRepository.findById(ownerId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found"));
-
-        if (!owner.getToken().equals(token)) {
+        if (!user.getId().equals(dependency.getFromSkill().getSkillMap().getOwnerId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the map owner can delete skills");
         }
 

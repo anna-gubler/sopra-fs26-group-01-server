@@ -2,7 +2,6 @@ package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
-import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,8 +29,6 @@ class SkillServiceTest {
     @Mock
     private SkillMapRepository skillMapRepository;
     @Mock
-    private UserRepository userRepository;
-    @Mock
     private SkillMapMembershipRepository skillMapMembershipRepository;
     @Mock
     private DependencyRepository dependencyRepository;
@@ -50,11 +47,9 @@ class SkillServiceTest {
     void setup() {
         owner = new User();
         owner.setId(1L);
-        owner.setToken("owner-token");
 
         otherUser = new User();
         otherUser.setId(2L);
-        otherUser.setToken("other-token");
 
         skillMap = new SkillMap();
         skillMap.setId(10L);
@@ -76,14 +71,13 @@ class SkillServiceTest {
     @Test
     void createSkill_validInput_returnsCreatedSkill() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
         given(skillRepository.save(any(Skill.class))).willReturn(skill);
 
         Skill input = new Skill();
         input.setName("Recursion");
         input.setLevel(2);
 
-        Skill result = skillService.createSkill(10L, input, "owner-token");
+        Skill result = skillService.createSkill(10L, input, owner);
 
         assertEquals("Recursion", result.getName());
         assertEquals(skillMap, result.getSkillMap());
@@ -94,14 +88,13 @@ class SkillServiceTest {
     @Test
     void createSkill_notOwner_throws403() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         Skill input = new Skill();
         input.setName("Recursion");
         input.setLevel(2);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(10L, input, "other-token"));
+                () -> skillService.createSkill(10L, input, otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(skillRepository, never()).save(any());
     }
@@ -109,42 +102,39 @@ class SkillServiceTest {
     @Test
     void createSkill_blankName_throws400() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         Skill input = new Skill();
         input.setName("   ");
         input.setLevel(2);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(10L, input, "owner-token"));
+                () -> skillService.createSkill(10L, input, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
     @Test
     void createSkill_levelTooHigh_throws400() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         Skill input = new Skill();
         input.setName("Recursion");
         input.setLevel(99);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(10L, input, "owner-token"));
+                () -> skillService.createSkill(10L, input, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
     @Test
     void createSkill_levelZero_throws400() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         Skill input = new Skill();
         input.setName("Recursion");
         input.setLevel(0);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(10L, input, "owner-token"));
+                () -> skillService.createSkill(10L, input, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
@@ -157,7 +147,7 @@ class SkillServiceTest {
         input.setLevel(1);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.createSkill(99L, input, "owner-token"));
+                () -> skillService.createSkill(99L, input, owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -166,19 +156,17 @@ class SkillServiceTest {
     @Test
     void deleteSkill_owner_deletesSuccessfully() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
-        assertDoesNotThrow(() -> skillService.deleteSkill(5L, "owner-token"));
+        assertDoesNotThrow(() -> skillService.deleteSkill(5L, owner));
         verify(skillRepository).delete(skill);
     }
 
     @Test
     void deleteSkill_notOwner_throws403() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.deleteSkill(5L, "other-token"));
+                () -> skillService.deleteSkill(5L, otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(skillRepository, never()).delete(any());
     }
@@ -188,7 +176,7 @@ class SkillServiceTest {
         given(skillRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.deleteSkill(99L, "owner-token"));
+                () -> skillService.deleteSkill(99L, owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -197,11 +185,9 @@ class SkillServiceTest {
     @Test
     void getSkillsByMap_owner_returnsAllSkills() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
-        given(skillMapMembershipRepository.findBySkillMapId(10L)).willReturn(List.of());
         given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill));
 
-        List<Skill> result = skillService.getSkillsByMap(10L, "owner-token");
+        List<Skill> result = skillService.getSkillsByMap(10L, owner);
 
         assertEquals(1, result.size());
         assertEquals("Recursion", result.get(0).getName());
@@ -210,11 +196,10 @@ class SkillServiceTest {
     @Test
     void getSkillsByMap_nonMember_throws403() {
         given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
-        given(skillMapMembershipRepository.findBySkillMapId(10L)).willReturn(List.of());
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).willReturn(false);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.getSkillsByMap(10L, "other-token"));
+                () -> skillService.getSkillsByMap(10L, otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -223,7 +208,7 @@ class SkillServiceTest {
         given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.getSkillsByMap(99L, "owner-token"));
+                () -> skillService.getSkillsByMap(99L, owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -232,10 +217,8 @@ class SkillServiceTest {
     @Test
     void getSkillById_owner_returnsSkill() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
-        given(skillMapMembershipRepository.findBySkillMapId(10L)).willReturn(List.of());
 
-        Skill result = skillService.getSkillById(5L, "owner-token");
+        Skill result = skillService.getSkillById(5L, owner);
 
         assertEquals(skill.getId(), result.getId());
         assertEquals("Recursion", result.getName());
@@ -243,16 +226,10 @@ class SkillServiceTest {
 
     @Test
     void getSkillById_member_returnsSkill() {
-        SkillMapMembership membership = new SkillMapMembership();
-        membership.setUserId(otherUser.getId());
-        membership.setSkillMapId(10L);
-
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
-        given(skillMapMembershipRepository.findBySkillMapId(10L)).willReturn(List.of(membership));
-        given(userRepository.findById(otherUser.getId())).willReturn(Optional.of(otherUser));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).willReturn(true);
 
-        Skill result = skillService.getSkillById(5L, "other-token");
+        Skill result = skillService.getSkillById(5L, otherUser);
 
         assertEquals(skill.getId(), result.getId());
     }
@@ -260,11 +237,10 @@ class SkillServiceTest {
     @Test
     void getSkillById_nonMember_throws403() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
-        given(skillMapMembershipRepository.findBySkillMapId(10L)).willReturn(List.of());
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).willReturn(false);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.getSkillById(5L, "other-token"));
+                () -> skillService.getSkillById(5L, otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -273,7 +249,7 @@ class SkillServiceTest {
         given(skillRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.getSkillById(99L, "owner-token"));
+                () -> skillService.getSkillById(99L, owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -282,13 +258,12 @@ class SkillServiceTest {
     @Test
     void updateSkill_name_updatesCorrectly() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
         given(skillRepository.save(any(Skill.class))).willReturn(skill);
 
         Skill updates = new Skill();
         updates.setName("Updated Name");
 
-        Skill result = skillService.updateSkill(5L, updates, "owner-token");
+        Skill result = skillService.updateSkill(5L, updates, owner);
 
         assertEquals("Updated Name", result.getName());
         verify(skillRepository).save(skill);
@@ -297,13 +272,12 @@ class SkillServiceTest {
     @Test
     void updateSkill_level_updatesCorrectly() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
         given(skillRepository.save(any(Skill.class))).willReturn(skill);
 
         Skill updates = new Skill();
         updates.setLevel(3);
 
-        Skill result = skillService.updateSkill(5L, updates, "owner-token");
+        Skill result = skillService.updateSkill(5L, updates, owner);
 
         assertEquals(3, result.getLevel());
     }
@@ -311,10 +285,9 @@ class SkillServiceTest {
     @Test
     void updateSkill_notOwner_throws403() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.updateSkill(5L, new Skill(), "other-token"));
+                () -> skillService.updateSkill(5L, new Skill(), otherUser));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(skillRepository, never()).save(any());
     }
@@ -322,13 +295,12 @@ class SkillServiceTest {
     @Test
     void updateSkill_levelOutOfRange_throws400() {
         given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
-        given(userRepository.findById(owner.getId())).willReturn(Optional.of(owner));
 
         Skill updates = new Skill();
         updates.setLevel(99);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.updateSkill(5L, updates, "owner-token"));
+                () -> skillService.updateSkill(5L, updates, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
@@ -337,7 +309,7 @@ class SkillServiceTest {
         given(skillRepository.findById(99L)).willReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillService.updateSkill(99L, new Skill(), "owner-token"));
+                () -> skillService.updateSkill(99L, new Skill(), owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 }

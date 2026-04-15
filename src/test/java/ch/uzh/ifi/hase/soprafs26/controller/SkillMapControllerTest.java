@@ -45,6 +45,21 @@ public class SkillMapControllerTest {
 
     private static final String TOKEN = "Bearer test-token";
 
+    private static User buildUser() {
+        User user = new User();
+        user.setId(1L);
+        return user;
+    }
+
+    // AuthInterceptor runs before every protected request and calls userService.getUserByToken().
+    // This mock makes the interceptor pass and sets the resolved user as a request attribute,
+    // which the controller then reads. UserService itself is not used by the controller directly.
+    private void mockAuthentication(User user, boolean success) {
+        if (success) {
+            given(userService.getUserByToken(any())).willReturn(user);
+        }
+    }
+
     private static SkillMap newSkillMap() {
         User owner = new User();
         //owner.setId(1L);                  // to be uncommented after merging S2, now code i snot compiling because of missing setId in User entity
@@ -73,6 +88,7 @@ public class SkillMapControllerTest {
     // Test: valid token returns 200 with the list of skill maps the user is a member of
     @Test
     public void givenValidToken_whenGetAllSkillMaps_thenReturnOk() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.getSkillMaps(any())).willReturn(new ArrayList<>());
 
         mockMvc.perform(get("/skillmaps")
@@ -84,6 +100,7 @@ public class SkillMapControllerTest {
     // Test: invalid token is rejected with 401 Unauthorized
     @Test
     public void givenInvalidToken_whenGetAllSkillMaps_thenReturnUnauthorized() throws Exception {
+        mockAuthentication(buildUser(), false);
         given(skillMapService.getSkillMaps(any()))
                 .willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
@@ -97,6 +114,7 @@ public class SkillMapControllerTest {
     // Test: valid token and body creates a skill map and returns 201 with the map title
     @Test
     public void givenValidToken_whenCreateSkillMap_thenReturnCreated() throws Exception {
+        mockAuthentication(buildUser(), true);
         SkillMap skillMap = newSkillMap();
         given(skillMapService.createSkillMap(any(), any())).willReturn(skillMap);
 
@@ -111,6 +129,7 @@ public class SkillMapControllerTest {
     // Test: invalid token is rejected with 401 Unauthorized
     @Test
     public void givenInvalidToken_whenCreateSkillMap_thenReturnUnauthorized() throws Exception {
+        mockAuthentication(buildUser(), false);
         given(skillMapService.createSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
@@ -125,6 +144,7 @@ public class SkillMapControllerTest {
     // Test: valid token and existing ID returns 200 with the skill map
     @Test
     public void givenValidToken_whenGetSkillMapById_thenReturnSkillMap() throws Exception {
+        mockAuthentication(buildUser(), true);
         SkillMap skillMap = newSkillMap();
         given(skillMapService.getSkillMapById(eq(1L), any())).willReturn(skillMap);
 
@@ -138,6 +158,7 @@ public class SkillMapControllerTest {
     // Test: non-existent skill map ID returns 404 Not Found
     @Test
     public void givenInvalidId_whenGetSkillMapById_thenReturnNotFound() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.getSkillMapById(eq(999L), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
@@ -151,6 +172,7 @@ public class SkillMapControllerTest {
     // Test: owner can update the skill map and receives 200 with the updated title
     @Test
     public void givenValidToken_whenUpdateSkillMap_thenReturnUpdated() throws Exception {
+        mockAuthentication(buildUser(), true);
         SkillMap skillMap = newSkillMap();
         skillMap.setTitle("Updated Title");
         given(skillMapService.updateSkillMap(eq(1L), any(), any())).willReturn(skillMap);
@@ -169,6 +191,7 @@ public class SkillMapControllerTest {
     // Test: non-owner trying to update a skill map is rejected with 403 Forbidden
     @Test
     public void givenNonOwner_whenUpdateSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.updateSkillMap(eq(1L), any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
 
@@ -183,6 +206,7 @@ public class SkillMapControllerTest {
     // Test: owner can delete a skill map and receives 204 No Content
     @Test
     public void givenValidToken_whenDeleteSkillMap_thenReturnNoContent() throws Exception {
+        mockAuthentication(buildUser(), true);
         mockMvc.perform(delete("/skillmaps/1")
                 .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON))
@@ -192,6 +216,7 @@ public class SkillMapControllerTest {
     // Test: non-owner trying to delete a skill map is rejected with 403 Forbidden
     @Test
     public void givenNonOwner_whenDeleteSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
         willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN))
                 .given(skillMapService).deleteSkillMap(eq(1L), any());
 
@@ -205,6 +230,7 @@ public class SkillMapControllerTest {
     // Test: valid invite code and skill map ID returns the created membership with 201
     @Test
     public void givenValidInviteCode_whenJoinSkillMap_thenReturnCreated() throws Exception {
+        mockAuthentication(buildUser(), true);
         SkillMapMembership membership = new SkillMapMembership();
         given(skillMapService.joinSkillMap(any(), any())).willReturn(membership);
 
@@ -221,6 +247,7 @@ public class SkillMapControllerTest {
     // Test: wrong invite code is rejected with 403 Forbidden
     @Test
     public void givenWrongInviteCode_whenJoinSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
 
@@ -237,6 +264,7 @@ public class SkillMapControllerTest {
     // Test: joining a map the user is already a member of returns 409 Conflict
     @Test
     public void givenUserAlreadyMember_whenJoinSkillMap_thenReturnConflict() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.CONFLICT));
 
@@ -253,6 +281,7 @@ public class SkillMapControllerTest {
     // Test: joining a skill map that does not exist returns 404 Not Found
     @Test
     public void givenNonExistentSkillMapId_whenJoinSkillMap_thenReturnNotFound() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.joinSkillMap(any(), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
@@ -270,6 +299,7 @@ public class SkillMapControllerTest {
     // Test: valid token returns 200 with the list of members for a skill map
     @Test
     public void givenValidToken_whenGetMembers_thenReturnOk() throws Exception {
+        mockAuthentication(buildUser(), true);
         given(skillMapService.getMembers(eq(1L), any())).willReturn(new ArrayList<>());
 
         mockMvc.perform(get("/skillmaps/1/members")
@@ -282,6 +312,7 @@ public class SkillMapControllerTest {
     // Test: owner or the member themselves can remove a membership and receives 204 No Content
     @Test
     public void givenValidToken_whenRemoveMember_thenReturnNoContent() throws Exception {
+        mockAuthentication(buildUser(), true);
         mockMvc.perform(delete("/skillmaps/1/members/2")
                 .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON))

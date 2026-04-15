@@ -3,7 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
-import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,38 +12,29 @@ import org.springframework.web.bind.annotation.*;
 public class CollaborationSessionController {
 
     private final CollaborationSessionService sessionService;
-    private final UserService userService;
 
-    public CollaborationSessionController(CollaborationSessionService sessionService,
-            UserService userService) {
+    public CollaborationSessionController(CollaborationSessionService sessionService) {
         this.sessionService = sessionService;
-        this.userService = userService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CollaborationSession startSession(@PathVariable Long skillMapId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+    public CollaborationSession startSession(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         return sessionService.startSession(skillMapId, user);
     }
 
     @GetMapping("/active")
     @ResponseStatus(HttpStatus.OK)
-    public CollaborationSession getActiveSession(@PathVariable Long skillMapId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+    public CollaborationSession getActiveSession(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         return sessionService.getActiveSession(skillMapId, user);
     }
 
     @PostMapping("/active/end")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void endSession(@PathVariable Long skillMapId,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring("Bearer ".length()).trim();
-        User user = userService.getUserByToken(token);
+    public void endSession(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         sessionService.endSession(skillMapId, user);
     }
 }

@@ -1,5 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,27 +56,23 @@ public class UserController {
 
 	@PostMapping("/auth/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void logout(@RequestHeader("Authorization") String authHeader) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User user = userService.getUserByToken(token);
+	public void logout(HttpServletRequest request) {
+		User user = (User) request.getAttribute("authenticatedUser");
 		userService.logoutUser(user);
 	}
 
 	@GetMapping("/users/me")
 	@ResponseStatus(HttpStatus.OK)
-	public UserGetDTO getUser(@RequestHeader("Authorization") String authHeader) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User user = userService.getUserByToken(token);
+	public UserGetDTO getUser(HttpServletRequest request) {
+		User user = (User) request.getAttribute("authenticatedUser");
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
 	}
 
 	@PatchMapping("/users/me")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public UserGetDTO changeUserProfile(@RequestBody UserPatchDTO dto,
-			@RequestHeader("Authorization") String authHeader) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User requestingUser = userService.getUserByToken(token);
+	public UserGetDTO changeUserProfile(@RequestBody UserPatchDTO dto, HttpServletRequest request) {
+		User requestingUser = (User) request.getAttribute("authenticatedUser");
 		User userInput = DTOMapper.INSTANCE.convertUserPatchDTOtoEntity(dto);
 		User changedUser = userService.changeUserInformation(requestingUser, userInput);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);
@@ -84,9 +81,8 @@ public class UserController {
 	@DeleteMapping("/users/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@ResponseBody
-	public void deleteUserProfile(@RequestHeader("Authorization") String authHeader, @RequestBody String password) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User user = userService.getUserByToken(token);
+	public void deleteUserProfile(@RequestBody String password, HttpServletRequest request) {
+		User user = (User) request.getAttribute("authenticatedUser");
 		userService.deleteUserProfile(user, password);
 	}
 
@@ -100,19 +96,16 @@ public class UserController {
 
 	@PatchMapping("/users/me/password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void changePassword(@RequestBody UserPasswordChangeDTO dto,
-			@RequestHeader("Authorization") String authHeader) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User user = userService.getUserByToken(token);
+	public void changePassword(@RequestBody UserPasswordChangeDTO dto, HttpServletRequest request) {
+		User user = (User) request.getAttribute("authenticatedUser");
 		userService.changePassword(user, dto.getOldPassword(), dto.getNewPassword(), dto.getConfirmPassword());
 	}
 
 	@PutMapping("/users/me/avatar")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody
-	public UserGetDTO changeUserAvatar(@RequestBody UserPutAvatarDTO dto, @RequestHeader("Authorization") String authHeader) {
-		String token = authHeader.substring("Bearer ".length()).trim();
-		User requestingUser = userService.getUserByToken(token);
+	public UserGetDTO changeUserAvatar(@RequestBody UserPutAvatarDTO dto, HttpServletRequest request) {
+		User requestingUser = (User) request.getAttribute("authenticatedUser");
 		User userInput = DTOMapper.INSTANCE.convertUserPutAvatarDTOtoEntity(dto);
 		User changedUser = userService.changeUserAvatar(requestingUser, userInput);
 		return DTOMapper.INSTANCE.convertEntityToUserGetDTO(changedUser);

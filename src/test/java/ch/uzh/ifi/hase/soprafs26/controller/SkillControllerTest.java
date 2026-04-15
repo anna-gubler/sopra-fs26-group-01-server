@@ -29,6 +29,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 
 @WebMvcTest(SkillController.class)
@@ -43,13 +44,15 @@ class SkillControllerTest {
     
     @MockitoBean
     private UserService userService;
-    
+
+    private User dummyUser;
 
     @BeforeEach
     void setupMocks() {
-        User dummyUser = new User();
+        dummyUser = new User();
         dummyUser.setId(1L);
-        given(userService.getUserByToken(any())).willReturn(dummyUser);}
+        given(userService.getUserByToken(any())).willReturn(dummyUser);
+    }
 
     private Skill buildSkill(Long id, String name, int level) {
         Skill s = new Skill();
@@ -66,7 +69,7 @@ class SkillControllerTest {
         Skill s1 = buildSkill(1L, "Variables", 1);
         Skill s2 = buildSkill(2L, "Loops",     2);
 
-        given(skillService.getSkillsByMap(10L, "valid-token"))
+        given(skillService.getSkillsByMap(eq(10L), any(User.class)))
                 .willReturn(List.of(s1, s2));
 
         MockHttpServletRequestBuilder request = get("/skillmaps/10/skills")
@@ -82,20 +85,19 @@ class SkillControllerTest {
     }
     // 301.2
     @Test
-    void getSkillsByMap_invalidToken_returns403() throws Exception {
-        given(skillService.getSkillsByMap(10L, "terrifying-bad-token"))
+    void getSkillsByMap_forbidden_returns403() throws Exception {
+        given(skillService.getSkillsByMap(eq(10L), any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized"));
 
         mockMvc.perform(get("/skillmaps/10/skills")
-                        .header("Authorization", "Bearer terrifying-bad-token")
-                        .header("token", "terrifying-bad-token")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
     // 301.3
     @Test
     void getSkillsByMap_skillMapNotFound_returns404() throws Exception {
-        given(skillService.getSkillsByMap(99L, "valid-token"))
+        given(skillService.getSkillsByMap(eq(99L), any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
         mockMvc.perform(get("/skillmaps/99/skills")
@@ -114,7 +116,7 @@ class SkillControllerTest {
         given(skillService.createSkill(
                 Mockito.eq(10L),
                 Mockito.any(Skill.class),
-                Mockito.eq("valid-token")))
+                Mockito.any(User.class)))
                 .willReturn(created);
 
         String body = """
@@ -137,12 +139,11 @@ class SkillControllerTest {
         given(skillService.createSkill(
                 Mockito.eq(10L),
                 Mockito.any(Skill.class),
-                Mockito.eq("other-token")))
+                Mockito.any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner"));
 
         mockMvc.perform(post("/skillmaps/10/skills")
-                        .header("Authorization", "Bearer other-token")
-                        .header("token", "other-token")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\", \"level\": 1 }"))
                 .andExpect(status().isForbidden());
@@ -153,7 +154,7 @@ class SkillControllerTest {
         given(skillService.createSkill(
                 Mockito.eq(99L),
                 Mockito.any(Skill.class),
-                Mockito.eq("valid-token")))
+                Mockito.any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
         mockMvc.perform(post("/skillmaps/99/skills")
@@ -170,7 +171,7 @@ class SkillControllerTest {
     void getSkillById_exists_returnsSkill() throws Exception {
         Skill skill = buildSkill(5L, "Recursion", 3);
 
-        given(skillService.getSkillById(5L, "valid-token")).willReturn(skill);
+        given(skillService.getSkillById(eq(5L), any(User.class))).willReturn(skill);
 
         mockMvc.perform(get("/skills/5")
                         .header("Authorization", "Bearer valid-token")
@@ -183,7 +184,7 @@ class SkillControllerTest {
     // 303.3
     @Test
     void getSkillById_notFound_returns404() throws Exception {
-        given(skillService.getSkillById(99L, "valid-token"))
+        given(skillService.getSkillById(eq(99L), any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
         mockMvc.perform(get("/skills/99")
@@ -202,7 +203,7 @@ class SkillControllerTest {
         given(skillService.updateSkill(
                 Mockito.eq(5L),
                 Mockito.any(Skill.class),
-                Mockito.eq("valid-token")))
+                Mockito.any(User.class)))
                 .willReturn(updated);
 
         String body = """
@@ -223,12 +224,11 @@ class SkillControllerTest {
         given(skillService.updateSkill(
                 Mockito.eq(5L),
                 Mockito.any(Skill.class),
-                Mockito.eq("other-token")))
+                Mockito.any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner"));
 
         mockMvc.perform(patch("/skills/5")
-                        .header("Authorization", "Bearer other-token")
-                        .header("token", "other-token")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"name\": \"X\" }"))
                 .andExpect(status().isForbidden());
@@ -239,7 +239,7 @@ class SkillControllerTest {
         given(skillService.updateSkill(
                 Mockito.eq(99L),
                 Mockito.any(Skill.class),
-                Mockito.eq("valid-token")))
+                Mockito.any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"));
 
         mockMvc.perform(patch("/skills/99")
@@ -254,7 +254,7 @@ class SkillControllerTest {
     // 305.1
     @Test
     void deleteSkill_validRequest_returns204() throws Exception {
-        doNothing().when(skillService).deleteSkill(5L, "valid-token");
+        doNothing().when(skillService).deleteSkill(eq(5L), any(User.class));
 
         mockMvc.perform(delete("/skills/5")
                         .header("Authorization", "Bearer valid-token")
@@ -265,18 +265,17 @@ class SkillControllerTest {
     @Test
     void deleteSkill_notOwner_returns403() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner"))
-                .when(skillService).deleteSkill(5L, "other-token");
+                .when(skillService).deleteSkill(eq(5L), any(User.class));
 
         mockMvc.perform(delete("/skills/5")
-                        .header("Authorization", "Bearer other-token")
-                        .header("token", "other-token"))
+                        .header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isForbidden());
     }
     // 305.3
     @Test
     void deleteSkill_notFound_returns404() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found"))
-                .when(skillService).deleteSkill(99L, "valid-token");
+                .when(skillService).deleteSkill(eq(99L), any(User.class));
 
         mockMvc.perform(delete("/skills/99")
                         .header("Authorization", "Bearer valid-token")
@@ -289,7 +288,7 @@ class SkillControllerTest {
         void getSkillByIdAndMap_exists_returnsSkill() throws Exception {
         Skill skill = buildSkill(5L, "Recursion", 3);
 
-        given(skillService.getSkillByIdAndMap(10L, 5L, "valid-token")).willReturn(skill);
+        given(skillService.getSkillByIdAndMap(eq(10L), eq(5L), any(User.class))).willReturn(skill);
 
         mockMvc.perform(get("/skillmaps/10/skills/5")
                         .header("Authorization", "Bearer valid-token")
@@ -301,7 +300,7 @@ class SkillControllerTest {
 
         @Test
         void getSkillByIdAndMap_skillNotInMap_returns404() throws Exception {
-        given(skillService.getSkillByIdAndMap(10L, 5L, "valid-token"))
+        given(skillService.getSkillByIdAndMap(eq(10L), eq(5L), any(User.class)))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill does not belong to this SkillMap"));
 
         mockMvc.perform(get("/skillmaps/10/skills/5")
