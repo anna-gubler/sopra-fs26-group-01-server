@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.RatingUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionEndedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionStartedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.QuestionUpdatedMessageDTO;
+
 
 @Service
 public class WebSocketBroadcastService {
@@ -31,5 +34,16 @@ public class WebSocketBroadcastService {
     public void broadcastRatingUpdate(long sessionId, long skillId, double averageRating) {
         String topic = String.format("/topic/sessions/%d/ratings", sessionId);
         messagingTemplate.convertAndSend(topic, new RatingUpdatedMessageDTO(skillId, averageRating));
+    }
+
+    public void broadcastQuestionUpdate(long sessionId, LiveQuestion question) {
+        String topic = String.format("/topic/sessions/%d/questions", sessionId);
+        messagingTemplate.convertAndSend(topic, new QuestionUpdatedMessageDTO(
+                question.getId(),
+                question.getSessionId(),
+                question.getText(),
+                question.getUpvoteCount(),
+                question.getIsAddressed()
+        ));
     }
 }
