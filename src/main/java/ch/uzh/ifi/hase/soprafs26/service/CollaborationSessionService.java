@@ -69,7 +69,9 @@ public class CollaborationSessionService {
         session.setActive(false);
         session.setEndedAt(LocalDateTime.now());
         session = sessionRepository.save(session);
-        liveQuestionService.deleteAllQuestionsForSession(session.getId());
+
+        //design decision to NOT delete the questions after session end
+        // liveQuestionService.deleteAllQuestionsForSession(session.getId()); 
 
         broadcastService.broadcastSessionEnded(skillMapId, session.getId(), session.getEndedAt());
     }
