@@ -3,10 +3,14 @@ package ch.uzh.ifi.hase.soprafs26.entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
+@Entity
+@Table(name = "upvote_record")
 public class UpvoteRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
