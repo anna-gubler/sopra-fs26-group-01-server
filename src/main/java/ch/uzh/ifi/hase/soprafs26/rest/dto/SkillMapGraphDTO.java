@@ -7,7 +7,6 @@ public class SkillMapGraphDTO {
     private String title;
     private List<SkillGetDTO> skills = List.of();
     private List<DependencyGetDTO> dependencies = List.of();
-    // TODO: replace with List<StudentProgressDTO> once StudentProgress entity is implemented
     private List<?> progress = List.of();
 
     public Long getSkillMapId() { return skillMapId; }

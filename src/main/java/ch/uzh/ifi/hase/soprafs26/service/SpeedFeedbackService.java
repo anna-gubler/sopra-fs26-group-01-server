@@ -3,7 +3,6 @@ package ch.uzh.ifi.hase.soprafs26.service;
 import ch.uzh.ifi.hase.soprafs26.constant.SpeedFeedback;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
-import ch.uzh.ifi.hase.soprafs26.websocket.dto.SpeedUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 
 import org.springframework.http.HttpStatus;
