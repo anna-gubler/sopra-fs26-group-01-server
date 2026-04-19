@@ -166,8 +166,6 @@ public class CollaborationSessionServiceTest {
 
     // --- getActiveSession ---
 
-    // --- getActiveSession ---
-
     @Test
     public void getActiveSession_memberAndSessionExists_returnsSession() {
         Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);

@@ -230,8 +230,6 @@ public class SkillMapService {
                 .map(DTOMapper.INSTANCE::convertDependencyEntityToGetDTO)
                 .collect(Collectors.toList());
 
-        //TODO: add progress as soon as this entity exists
-
         SkillMapGraphDTO graph = new SkillMapGraphDTO();
         graph.setSkillMapId(map.getId());
         graph.setTitle(map.getTitle());
