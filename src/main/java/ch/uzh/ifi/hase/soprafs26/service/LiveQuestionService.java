@@ -56,7 +56,7 @@ public class LiveQuestionService {
         question.setIsAddressed(false);
         question.setPostedAt(LocalDateTime.now());
         LiveQuestion saved = liveQuestionRepository.save(question);
-        webSocketBroadcastService.broadcastQuestionUpdate(sessionId, saved);
+        webSocketBroadcastService.broadcastQuestionsState(sessionId, getQuestionsBySession(sessionId));
         return saved;
     }
 
@@ -80,7 +80,7 @@ public class LiveQuestionService {
 
         question.setUpvoteCount(question.getUpvoteCount() + 1);
         LiveQuestion saved = liveQuestionRepository.save(question);
-        webSocketBroadcastService.broadcastQuestionUpdate(question.getSessionId(), saved);
+        webSocketBroadcastService.broadcastQuestionsState(question.getSessionId(), getQuestionsBySession(question.getSessionId()));
         return saved;
     }
 
@@ -94,7 +94,7 @@ public class LiveQuestionService {
         upvoteRecordRepository.delete(record);
         question.setUpvoteCount(Math.max(0, question.getUpvoteCount() - 1));
         LiveQuestion saved = liveQuestionRepository.save(question);
-        webSocketBroadcastService.broadcastQuestionUpdate(question.getSessionId(), saved);
+        webSocketBroadcastService.broadcastQuestionsState(question.getSessionId(), getQuestionsBySession(question.getSessionId()));
     }
 
     public LiveQuestion markAddressed(Long questionId, Long requestingUserId) {
@@ -114,7 +114,7 @@ public class LiveQuestionService {
         question.setIsAddressed(true);
         question.setUpdatedAt(LocalDateTime.now());
         LiveQuestion saved = liveQuestionRepository.save(question);
-        webSocketBroadcastService.broadcastQuestionUpdate(question.getSessionId(), saved);
+        webSocketBroadcastService.broadcastQuestionsState(question.getSessionId(), getQuestionsBySession(question.getSessionId()));
         return saved;
     }
 

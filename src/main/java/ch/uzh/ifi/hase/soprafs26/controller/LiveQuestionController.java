@@ -3,7 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.LiveQuestionService;
-import ch.uzh.ifi.hase.soprafs26.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -15,12 +15,10 @@ import java.util.Map;
 public class LiveQuestionController {
 
     private final LiveQuestionService liveQuestionService;
-    private final UserService userService;
 
     @Autowired
-    public LiveQuestionController(LiveQuestionService liveQuestionService, UserService userService) {
+    public LiveQuestionController(LiveQuestionService liveQuestionService) {
         this.liveQuestionService = liveQuestionService;
-        this.userService = userService;
     }
 
     // 801: GET /sessions/{sessionId}/questions
@@ -52,8 +50,8 @@ public class LiveQuestionController {
     @PostMapping("/questions/{questionId}/upvotes")
     @ResponseStatus(HttpStatus.CREATED)
     public void upvoteQuestion(@PathVariable Long questionId,
-                               @RequestHeader("Authorization") String token) {
-        User user = userService.getUserByToken(token);
+                               HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         liveQuestionService.upvoteQuestion(questionId, user.getId());
     }
 
@@ -61,8 +59,8 @@ public class LiveQuestionController {
     @DeleteMapping("/questions/{questionId}/upvotes/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeUpvote(@PathVariable Long questionId,
-                             @RequestHeader("Authorization") String token) {
-        User user = userService.getUserByToken(token);
+                             HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         liveQuestionService.removeUpvote(questionId, user.getId());
     }
 
@@ -70,8 +68,8 @@ public class LiveQuestionController {
     @PostMapping("/questions/{questionId}/mark-addressed")
     @ResponseStatus(HttpStatus.OK)
     public LiveQuestion markAddressed(@PathVariable Long questionId,
-                                    @RequestHeader("Authorization") String token) {
-        User user = userService.getUserByToken(token);
+                                      HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
         return liveQuestionService.markAddressed(questionId, user.getId());
     }
 }
