@@ -20,15 +20,17 @@ public class CollaborationSessionService {
     private final SkillMapRepository skillMapRepository;
     private final CollaborationSessionRepository sessionRepository;
     private final WebSocketBroadcastService broadcastService;
+    private final LiveQuestionService liveQuestionService;
     private final SkillMapMembershipRepository membershipRepository;
 
     public CollaborationSessionService(CollaborationSessionRepository sessionRepository,
             WebSocketBroadcastService broadcastService, SkillMapRepository skillMapRepository,
-            SkillMapMembershipRepository membershipRepository) {
+            SkillMapMembershipRepository membershipRepository, LiveQuestionService liveQuestionService) {
         this.sessionRepository = sessionRepository;
         this.broadcastService = broadcastService;
         this.skillMapRepository = skillMapRepository;
         this.membershipRepository = membershipRepository;
+        this.liveQuestionService = liveQuestionService;
     }
 
     public CollaborationSession startSession(Long skillMapId, User user) {
@@ -67,6 +69,9 @@ public class CollaborationSessionService {
         session.setActive(false);
         session.setEndedAt(LocalDateTime.now());
         session = sessionRepository.save(session);
+
+        //design decision to NOT delete the questions after session end
+        // liveQuestionService.deleteAllQuestionsForSession(session.getId()); 
 
         broadcastService.broadcastSessionEnded(skillMapId, session.getId(), session.getEndedAt());
     }
