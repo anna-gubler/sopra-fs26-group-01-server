@@ -20,17 +20,18 @@ public class CollaborationSessionService {
     private final SkillMapRepository skillMapRepository;
     private final CollaborationSessionRepository sessionRepository;
     private final WebSocketBroadcastService broadcastService;
-    private final LiveQuestionService liveQuestionService;
     private final SkillMapMembershipRepository membershipRepository;
+    private final SpeedFeedbackService speedFeedbackService;
 
     public CollaborationSessionService(CollaborationSessionRepository sessionRepository,
             WebSocketBroadcastService broadcastService, SkillMapRepository skillMapRepository,
-            SkillMapMembershipRepository membershipRepository, LiveQuestionService liveQuestionService) {
+            SkillMapMembershipRepository membershipRepository,
+            SpeedFeedbackService speedFeedbackService) {
         this.sessionRepository = sessionRepository;
         this.broadcastService = broadcastService;
         this.skillMapRepository = skillMapRepository;
         this.membershipRepository = membershipRepository;
-        this.liveQuestionService = liveQuestionService;
+        this.speedFeedbackService = speedFeedbackService;
     }
 
     public CollaborationSession startSession(Long skillMapId, User user) {
@@ -69,6 +70,7 @@ public class CollaborationSessionService {
         session.setActive(false);
         session.setEndedAt(LocalDateTime.now());
         session = sessionRepository.save(session);
+        speedFeedbackService.clearSession(session.getId());
 
         //design decision to NOT delete the questions after session end
         // liveQuestionService.deleteAllQuestionsForSession(session.getId()); 
@@ -82,5 +84,10 @@ public class CollaborationSessionService {
         }
         return sessionRepository.findBySkillMapIdAndIsActiveTrue(skillMapId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"));
+    }
+
+    public CollaborationSession getSessionById(Long sessionId) {
+        return sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
     }
 }

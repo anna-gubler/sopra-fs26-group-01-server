@@ -10,7 +10,6 @@ import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.UpvoteRecordRepository;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ public class LiveQuestionService {
     private final SkillMapRepository skillMapRepository;
     private final WebSocketBroadcastService webSocketBroadcastService;
 
-    @Autowired
     public LiveQuestionService(LiveQuestionRepository liveQuestionRepository,
                             UpvoteRecordRepository upvoteRecordRepository,
                             CollaborationSessionRepository collaborationSessionRepository,
@@ -93,7 +91,7 @@ public class LiveQuestionService {
 
         upvoteRecordRepository.delete(record);
         question.setUpvoteCount(Math.max(0, question.getUpvoteCount() - 1));
-        LiveQuestion saved = liveQuestionRepository.save(question);
+        liveQuestionRepository.save(question);
         webSocketBroadcastService.broadcastQuestionsState(question.getSessionId(), getQuestionsBySession(question.getSessionId()));
     }
 

@@ -39,6 +39,9 @@ public class CollaborationSessionServiceTest {
     private WebSocketBroadcastService broadcastService;
 
     @Mock
+    private SpeedFeedbackService speedFeedbackService;
+
+    @Mock
     private SkillMapMembershipRepository membershipRepository;
 
     @InjectMocks
@@ -130,6 +133,7 @@ public class CollaborationSessionServiceTest {
         Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
                 .thenReturn(Optional.of(buildActiveSession()));
         Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(buildActiveSession());
+        Mockito.doNothing().when(speedFeedbackService).clearSession(Mockito.any());
 
         sessionService.endSession(SKILL_MAP_ID, buildOwner());
 
@@ -159,8 +163,6 @@ public class CollaborationSessionServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.endSession(SKILL_MAP_ID, buildOwner()));
     }
-
-    // --- getActiveSession ---
 
     // --- getActiveSession ---
 

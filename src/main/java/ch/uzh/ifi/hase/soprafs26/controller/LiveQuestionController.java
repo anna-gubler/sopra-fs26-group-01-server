@@ -4,7 +4,6 @@ import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.LiveQuestionService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +15,6 @@ public class LiveQuestionController {
 
     private final LiveQuestionService liveQuestionService;
 
-    @Autowired
     public LiveQuestionController(LiveQuestionService liveQuestionService) {
         this.liveQuestionService = liveQuestionService;
     }

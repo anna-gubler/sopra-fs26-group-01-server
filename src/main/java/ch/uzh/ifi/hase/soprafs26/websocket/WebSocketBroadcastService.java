@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.RatingUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionEndedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionStartedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.SpeedUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.QuestionsStateMessageDTO;
-
 
 @Service
 public class WebSocketBroadcastService {
@@ -40,5 +40,10 @@ public class WebSocketBroadcastService {
     public void broadcastQuestionsState(long sessionId, List<LiveQuestion> questions) {
         String topic = String.format("/topic/sessions/%d/questions", sessionId);
         messagingTemplate.convertAndSend(topic, new QuestionsStateMessageDTO(sessionId, questions));
+    }
+
+    public void broadcastSpeedUpdated(long skillMapId, int tooFast, int tooSlow, int totalResponses) {
+        String topic = String.format("/topic/skillmaps/%d/live", skillMapId);
+        messagingTemplate.convertAndSend(topic, new SpeedUpdatedMessageDTO(tooFast, tooSlow, totalResponses));
     }
 }
