@@ -74,6 +74,7 @@ public class LiveQuestionService {
         UpvoteRecord record = new UpvoteRecord();
         record.setQuestionId(questionId);
         record.setUserId(userId);
+        record.setVotedAt(LocalDateTime.now());
         upvoteRecordRepository.save(record);
 
         question.setUpvoteCount(question.getUpvoteCount() + 1);
