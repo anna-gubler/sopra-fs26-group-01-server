@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.service;
 import ch.uzh.ifi.hase.soprafs26.constant.SpeedFeedback;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SpeedFeedbackGetDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,6 +119,61 @@ public class SpeedFeedbackServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> speedFeedbackService.submitFeedback(SESSION_ID, USER_ID, SpeedFeedback.TOO_FAST));
+    }
+
+    // --- getCounts ---
+
+    @Test
+    public void getCounts_noVotes_returnsAllZeros() {
+        SpeedFeedbackGetDTO dto = speedFeedbackService.getCounts(SESSION_ID);
+
+        assertEquals(0, dto.getTooFast());
+        assertEquals(0, dto.getTooSlow());
+        assertEquals(0, dto.getTotalResponses());
+    }
+
+    @Test
+    public void getCounts_mixedVotes_returnsCorrectCounts() {
+        Mockito.when(collaborationSessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+
+        speedFeedbackService.submitFeedback(SESSION_ID, USER_ID, SpeedFeedback.TOO_FAST);
+        speedFeedbackService.submitFeedback(SESSION_ID, OTHER_USER_ID, SpeedFeedback.TOO_SLOW);
+
+        SpeedFeedbackGetDTO dto = speedFeedbackService.getCounts(SESSION_ID);
+
+        assertEquals(1, dto.getTooFast());
+        assertEquals(1, dto.getTooSlow());
+        assertEquals(2, dto.getTotalResponses());
+    }
+
+    @Test
+    public void getCounts_okVote_countedInTotalOnly() {
+        Mockito.when(collaborationSessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+
+        speedFeedbackService.submitFeedback(SESSION_ID, USER_ID, SpeedFeedback.OK);
+
+        SpeedFeedbackGetDTO dto = speedFeedbackService.getCounts(SESSION_ID);
+
+        assertEquals(0, dto.getTooFast());
+        assertEquals(0, dto.getTooSlow());
+        assertEquals(1, dto.getTotalResponses());
+    }
+
+    @Test
+    public void getCounts_afterClear_returnsAllZeros() {
+        Mockito.when(collaborationSessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+
+        speedFeedbackService.submitFeedback(SESSION_ID, USER_ID, SpeedFeedback.TOO_FAST);
+        speedFeedbackService.clearSession(SESSION_ID);
+
+        SpeedFeedbackGetDTO dto = speedFeedbackService.getCounts(SESSION_ID);
+
+        assertEquals(0, dto.getTooFast());
+        assertEquals(0, dto.getTooSlow());
+        assertEquals(0, dto.getTotalResponses());
     }
 
     // --- clearSession ---

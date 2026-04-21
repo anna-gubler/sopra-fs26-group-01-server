@@ -18,11 +18,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SpeedFeedbackGetDTO;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(SpeedFeedbackController.class)
@@ -56,6 +60,40 @@ public class SpeedFeedbackControllerTest {
         SpeedFeedbackPutDTO dto = new SpeedFeedbackPutDTO();
         dto.setFeedback(feedback);
         return dto;
+    }
+
+    // --- GET /sessions/{sessionId}/speed ---
+
+    @Test
+    public void givenVotes_whenGetSpeedCounts_thenReturnCounts() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        given(speedFeedbackService.getCounts(SESSION_ID))
+                .willReturn(new SpeedFeedbackGetDTO(2, 1, 4));
+
+        mockMvc.perform(get("/sessions/{sessionId}/speed", SESSION_ID)
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tooFast").value(2))
+                .andExpect(jsonPath("$.tooSlow").value(1))
+                .andExpect(jsonPath("$.totalResponses").value(4));
+    }
+
+    @Test
+    public void givenNoVotes_whenGetSpeedCounts_thenReturnZeros() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        given(speedFeedbackService.getCounts(SESSION_ID))
+                .willReturn(new SpeedFeedbackGetDTO(0, 0, 0));
+
+        mockMvc.perform(get("/sessions/{sessionId}/speed", SESSION_ID)
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tooFast").value(0))
+                .andExpect(jsonPath("$.tooSlow").value(0))
+                .andExpect(jsonPath("$.totalResponses").value(0));
     }
 
     // --- PUT /sessions/{sessionId}/speed ---
