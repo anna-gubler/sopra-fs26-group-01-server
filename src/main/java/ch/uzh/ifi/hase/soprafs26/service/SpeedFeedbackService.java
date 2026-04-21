@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.service;
 import ch.uzh.ifi.hase.soprafs26.constant.SpeedFeedback;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SpeedFeedbackGetDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,13 @@ public class SpeedFeedbackService {
                 .computeIfAbsent(sessionId, id -> new ConcurrentHashMap<>())
                 .put(userId, feedback);
         broadcastSpeedUpdate(sessionId);
+    }
+
+    public SpeedFeedbackGetDTO getCounts(Long sessionId) {
+        Map<Long, SpeedFeedback> votes = speedVotes.getOrDefault(sessionId, new ConcurrentHashMap<>());
+        int tooFast = (int) votes.values().stream().filter(v -> v == SpeedFeedback.TOO_FAST).count();
+        int tooSlow = (int) votes.values().stream().filter(v -> v == SpeedFeedback.TOO_SLOW).count();
+        return new SpeedFeedbackGetDTO(tooFast, tooSlow, votes.size());
     }
 
     public void clearSession(Long sessionId) {

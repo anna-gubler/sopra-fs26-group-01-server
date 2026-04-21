@@ -1,6 +1,7 @@
 package ch.uzh.ifi.hase.soprafs26.controller;
 
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SpeedFeedbackGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SpeedFeedbackPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.SpeedFeedbackService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,12 @@ public class SpeedFeedbackController {
 
     public SpeedFeedbackController(SpeedFeedbackService speedFeedbackService) {
         this.speedFeedbackService = speedFeedbackService;
+    }
+
+    @GetMapping("/speed")
+    @ResponseStatus(HttpStatus.OK)
+    public SpeedFeedbackGetDTO getSpeedCounts(@PathVariable Long sessionId) {
+        return speedFeedbackService.getCounts(sessionId);
     }
 
     @PutMapping("/speed")
