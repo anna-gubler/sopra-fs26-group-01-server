@@ -195,6 +195,7 @@ public class UserServiceTest {
 		input.setUsername("newUsername");
 
 		Mockito.when(userRepository.findByUsername("newUsername")).thenReturn(Optional.empty());
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		User result = userService.changeUserInformation(requestingUser, input);
 
@@ -220,6 +221,8 @@ public class UserServiceTest {
 		User input = new User();
 		input.setBio("updated bio");
 
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
+
 		User result = userService.changeUserInformation(requestingUser, input);
 
 		assertEquals("updated bio", result.getBio());
@@ -231,6 +234,8 @@ public class UserServiceTest {
 
 		User input = new User();
 		input.setPassword("newPassword123");
+
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		User result = userService.changeUserInformation(requestingUser, input);
 
