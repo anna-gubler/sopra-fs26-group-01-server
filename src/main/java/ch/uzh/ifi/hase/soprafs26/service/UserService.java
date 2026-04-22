@@ -137,18 +137,19 @@ public class UserService {
 	}
 
 	public void changePassword(User user, String oldPassword, String newPassword, String confirmPassword) {
-		if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+		User managedUser = userRepository.findById(user.getId())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+		if (!passwordEncoder.matches(oldPassword, managedUser.getPassword())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Old password is incorrect");
 		}
-		if (passwordEncoder.matches(newPassword, user.getPassword())) {
+		if (passwordEncoder.matches(newPassword, managedUser.getPassword())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "New password must be different from the old password");
 		}
 		if (!newPassword.equals(confirmPassword)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
 		}
-		user.setPassword(hashPassword(newPassword));
-		userRepository.flush();
-
+		managedUser.setPassword(hashPassword(newPassword));
+		userRepository.saveAndFlush(managedUser);
 	}
 
 	public void deleteUserProfile(User user, String password) {
