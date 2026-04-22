@@ -133,8 +133,7 @@ public class UserService {
 		if (userInput.getPassword() != null) {
 			requestingUser.setPassword(hashPassword(userInput.getPassword()));
 		}
-
-		return requestingUser;
+		return userRepository.saveAndFlush(requestingUser);
 	}
 
 	public void changePassword(User user, String oldPassword, String newPassword, String confirmPassword) {
@@ -148,6 +147,8 @@ public class UserService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
 		}
 		user.setPassword(hashPassword(newPassword));
+		userRepository.flush();
+
 	}
 
 	public void deleteUserProfile(User user, String password) {
@@ -167,8 +168,8 @@ public class UserService {
 		if (userInput.getSeed() != null) {
 			requestingUser.setSeed(userInput.getSeed());
 		}
+		return userRepository.saveAndFlush(requestingUser);
 
-		return requestingUser;
 	}
 
 }
