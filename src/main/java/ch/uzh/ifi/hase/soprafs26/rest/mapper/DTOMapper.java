@@ -7,6 +7,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
+import ch.uzh.ifi.hase.soprafs26.entity.StudentProgress;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
@@ -16,6 +17,7 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillPutDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.StudentProgressGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
@@ -134,4 +136,8 @@ public interface DTOMapper {
     @Mapping(source = "fromSkill.id", target = "fromSkillId")
     @Mapping(source = "toSkill.id", target = "toSkillId")
     DependencyGetDTO convertDependencyEntityToGetDTO(Dependency dependency);
+
+    // Student Progress
+    StudentProgressGetDTO convertEntityToStudentProgressGetDTO(StudentProgress studentProgress);
+
 }
