@@ -1,5 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
@@ -138,5 +141,23 @@ public class SkillMapController {
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
             .contentType(MediaType.APPLICATION_JSON)
             .body(json);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<SkillMapGetDTO> importSkillMap(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        User requester = (User) request.getAttribute("authenticatedUser");
+
+        SkillMapExportDTO importDTO;
+        try {
+            importDTO = objectMapper.readValue(file.getInputStream(), SkillMapExportDTO.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file format.");
+        }
+
+        SkillMap created = skillMapService.importSkillMap(importDTO, requester);
+
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(DTOMapper.INSTANCE.convertEntityToSkillMapGetDTO(created));
     }
 }

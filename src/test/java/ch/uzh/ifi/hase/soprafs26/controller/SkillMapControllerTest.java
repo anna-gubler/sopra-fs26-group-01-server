@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -371,6 +372,44 @@ public class SkillMapControllerTest {
                 .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    // POST /skillmaps/import
+    @Test
+    public void givenValidFile_whenImportSkillMap_thenReturnCreated() throws Exception {
+        mockAuthentication(buildUser(), true);
+        SkillMap created = newSkillMap();
+        given(skillMapService.importSkillMap(any(), any())).willReturn(created);
+
+        SkillMapExportDTO exportDTO = new SkillMapExportDTO();
+        exportDTO.setTitle("Imported Map");
+        exportDTO.setNumberOfLevels(3);
+        exportDTO.setIsPublic(false);
+        exportDTO.setSkills(new ArrayList<>());
+        exportDTO.setDependencies(new ArrayList<>());
+
+        String json = asJsonString(exportDTO);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "skillmap.json", MediaType.APPLICATION_JSON_VALUE, json.getBytes());
+
+        mockMvc.perform(multipart("/skillmaps/import")
+                .file(file)
+                .header("Authorization", TOKEN))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    public void givenInvalidFile_whenImportSkillMap_thenReturnBadRequest() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "broken.json", MediaType.APPLICATION_JSON_VALUE, 
+                "not valid json {{{".getBytes());
+
+        mockMvc.perform(multipart("/skillmaps/import")
+                .file(file)
+                .header("Authorization", TOKEN))
+                .andExpect(status().isBadRequest());
     }
 
     private String asJsonString(final Object object) {
