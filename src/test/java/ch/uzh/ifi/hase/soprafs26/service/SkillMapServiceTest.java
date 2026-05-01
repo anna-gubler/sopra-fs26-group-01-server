@@ -10,6 +10,8 @@ import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -473,5 +475,88 @@ class SkillMapServiceTest {
         assertEquals("Test Map", result.getTitle());
         assertTrue(result.getSkills().isEmpty());
         assertTrue(result.getDependencies().isEmpty());
+    }
+    // ─── 1102  importSkillMap ─────────────────────────────────────────────────
+    private SkillMapExportDTO buildValidImportDTO() {
+        SkillExportDTO s1 = new SkillExportDTO();
+        s1.setExportId("skill-1");
+        s1.setName("Variables");
+        s1.setDifficulty("EASY");
+        s1.setLevel(1);
+        s1.setIsLocked(false);
+
+        SkillExportDTO s2 = new SkillExportDTO();
+        s2.setExportId("skill-2");
+        s2.setName("Control Flow");
+        s2.setDifficulty("MEDIUM");
+        s2.setLevel(2);
+        s2.setIsLocked(false);
+
+        DependencyExportDTO dep = new DependencyExportDTO();
+        dep.setFromExportId("skill-1");
+        dep.setToExportId("skill-2");
+
+        SkillMapExportDTO dto = new SkillMapExportDTO();
+        dto.setTitle("Imported Map");
+        dto.setDescription("Some description");
+        dto.setNumberOfLevels(3);
+        dto.setIsPublic(false);
+        dto.setSkills(List.of(s1, s2));
+        dto.setDependencies(List.of(dep));
+        return dto;
+        }
+
+    @Test
+    void importSkillMap_validDTO_createsSkillMapWithSkillsAndDependencies() {
+        given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+        given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
+
+        Skill savedSkill1 = new Skill();
+        savedSkill1.setId(1L);
+        Skill savedSkill2 = new Skill();
+        savedSkill2.setId(2L);
+        given(skillRepository.save(any(Skill.class)))
+                .willReturn(savedSkill1, savedSkill2);
+        given(skillRepository.findById(1L)).willReturn(Optional.of(savedSkill1));
+        given(skillRepository.findById(2L)).willReturn(Optional.of(savedSkill2));
+
+        SkillMap result = skillMapService.importSkillMap(buildValidImportDTO(), owner);
+
+        assertNotNull(result);
+        verify(skillRepository, times(2)).save(any(Skill.class));
+        verify(dependencyRepository, times(1)).save(any(Dependency.class));
+    }
+
+    @Test
+    void importSkillMap_missingTitle_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        dto.setTitle(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void importSkillMap_nullSkillsList_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        dto.setSkills(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void importSkillMap_brokenEdge_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        DependencyExportDTO brokenDep = new DependencyExportDTO();
+        brokenDep.setFromExportId("skill-1");
+        brokenDep.setToExportId("skill-99"); // existiert nicht
+        dto.setDependencies(List.of(brokenDep));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 }
