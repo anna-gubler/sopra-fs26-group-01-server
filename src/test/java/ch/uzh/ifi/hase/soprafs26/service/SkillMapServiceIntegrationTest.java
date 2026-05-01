@@ -1,10 +1,14 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
+import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.*;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -163,5 +167,51 @@ class SkillMapServiceIntegrationTest {
 
         assertEquals(1, maps.size());
         assertEquals(skillMap.getId(), maps.get(0).getId());
+    }
+
+    // exportSkillMap
+    @Test
+    void exportSkillMap_withSkillsAndDependencies_returnsCorrectStructure() {
+        Skill s1 = new Skill();
+        s1.setName("Variables");
+        s1.setSkillMap(skillMap);
+        s1.setLevel(1);
+        s1.setIsLocked(false);
+        s1.setDifficulty("EASY");
+        s1 = skillRepository.save(s1);
+
+        Skill s2 = new Skill();
+        s2.setName("Control Flow");
+        s2.setSkillMap(skillMap);
+        s2.setLevel(2);
+        s2.setIsLocked(false);
+        s2.setDifficulty("MEDIUM");
+        s2 = skillRepository.save(s2);
+
+        Dependency dep = new Dependency();
+        dep.setFromSkill(s1);
+        dep.setToSkill(s2); 
+        dependencyRepository.save(dep);
+
+        SkillMapExportDTO result = skillMapService.exportSkillMap(skillMap.getId(), owner);
+
+        assertEquals(skillMap.getTitle(), result.getTitle());
+        assertEquals(2, result.getSkills().size());
+        assertEquals(1, result.getDependencies().size());
+        // keine internen IDs im Export
+        assertTrue(result.getSkills().stream()
+                .allMatch(s -> s.getExportId().startsWith("skill-")));
+        // dependency referenziert korrekte exportIds
+        String fromId = result.getDependencies().get(0).getFromExportId();
+        String toId = result.getDependencies().get(0).getToExportId();
+        assertTrue(result.getSkills().stream().anyMatch(s -> s.getExportId().equals(fromId)));
+        assertTrue(result.getSkills().stream().anyMatch(s -> s.getExportId().equals(toId)));
+    }
+
+    @Test
+    void exportSkillMap_nonMember_throws403() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.exportSkillMap(skillMap.getId(), student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }

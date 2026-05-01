@@ -1,6 +1,9 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -9,11 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
+import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -21,8 +27,11 @@ import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
 
@@ -236,5 +245,44 @@ public class SkillMapService {
         graph.setSkills(skillDTOs);
         graph.setDependencies(dependencyDTOs);
         return graph;
+    }
+
+    public SkillMapExportDTO exportSkillMap(Long skillMapId, User requester) {
+        SkillMap skillMap = getSkillMapById(skillMapId, requester);
+
+        List<Skill> skills = skillRepository.findBySkillMap(skillMap);
+        List<Long> skillIds = skills.stream().map(Skill::getId).collect(Collectors.toList());
+        List<Dependency> dependencies = dependencyRepository.findByFromSkill_IdIn(skillIds);
+
+        Map<Long, String> exportIdMap = new HashMap<>();
+        List<SkillExportDTO> skillDTOs = new ArrayList<>();
+        int counter = 1;
+        for (Skill skill : skills) {
+            SkillExportDTO dto = new SkillExportDTO();
+            dto.setExportId("skill-" + counter++);
+            dto.setName(skill.getName());
+            dto.setDescription(skill.getDescription());
+            dto.setResources(skill.getResources());
+            dto.setDifficulty(skill.getDifficulty());
+            dto.setLevel(skill.getLevel());
+            dto.setPositionX(skill.getPositionX());
+            dto.setIsLocked(skill.getIsLocked());
+            exportIdMap.put(skill.getId(), dto.getExportId());
+            skillDTOs.add(dto);
+        }
+
+        List<DependencyExportDTO> depDTOs = new ArrayList<>();
+        for (Dependency dep : dependencies) {
+            DependencyExportDTO dto = new DependencyExportDTO();
+            dto.setFromExportId(exportIdMap.get(dep.getFromSkill().getId()));
+            dto.setToExportId(exportIdMap.get(dep.getToSkill().getId()));
+            depDTOs.add(dto);
+        }
+        SkillMapExportDTO exportDTO = new SkillMapExportDTO();
+        exportDTO.setTitle(skillMap.getTitle());
+        exportDTO.setNumberOfLevels(skillMap.getNumberOfLevels());
+        exportDTO.setSkills(skillDTOs);
+        exportDTO.setDependencies(depDTOs);
+        return exportDTO;
     }
 }
