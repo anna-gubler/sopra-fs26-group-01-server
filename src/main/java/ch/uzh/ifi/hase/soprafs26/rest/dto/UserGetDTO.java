@@ -15,6 +15,8 @@ public class UserGetDTO {
 	private String token;
 	private String seed;
 	private String style;
+	private boolean hasSeenDashboard;
+	private boolean hasSeenMap;
 
 	public Long getId() {
 		return id;
@@ -78,5 +80,21 @@ public class UserGetDTO {
 
 	public void setStyle(String style) {
 		this.style = style;
+	}
+
+	public boolean isHasSeenDashboard() {
+		return hasSeenDashboard;
+	}
+
+	public void setHasSeenDashboard(boolean hasSeenDashboard) {
+		this.hasSeenDashboard = hasSeenDashboard;
+	}
+
+	public boolean isHasSeenMap() {
+		return hasSeenMap;
+	}
+
+	public void setHasSeenMap(boolean hasSeenMap) {
+		this.hasSeenMap = hasSeenMap;
 	}
 }

@@ -52,6 +52,12 @@ public class User implements Serializable {
 	@Column(nullable = false)
 	private String seed;
 
+	@Column(nullable = false)
+	private boolean hasSeenDashboard = false;
+
+	@Column(nullable = false)
+	private boolean hasSeenMap = false;
+
 	public Long getId() {
 		return id;
 	}
@@ -122,5 +128,21 @@ public class User implements Serializable {
 
 	public void setSeed(String seed) {
 		this.seed = seed;
+	}
+
+	public boolean isHasSeenDashboard() {
+		return hasSeenDashboard;
+	}
+
+	public void setHasSeenDashboard(boolean hasSeenDashboard) {
+		this.hasSeenDashboard = hasSeenDashboard;
+	}
+
+	public boolean isHasSeenMap() {
+		return hasSeenMap;
+	}
+
+	public void setHasSeenMap(boolean hasSeenMap) {
+		this.hasSeenMap = hasSeenMap;
 	}
 }
