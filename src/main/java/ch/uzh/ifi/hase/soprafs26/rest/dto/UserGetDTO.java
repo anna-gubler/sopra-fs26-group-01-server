@@ -16,7 +16,8 @@ public class UserGetDTO {
 	private String seed;
 	private String style;
 	private boolean hasSeenDashboard;
-	private boolean hasSeenMap;
+	private boolean hasSeenMapAsMember;
+	private boolean hasSeenMapAsOwner;
 
 	public Long getId() {
 		return id;
@@ -90,11 +91,19 @@ public class UserGetDTO {
 		this.hasSeenDashboard = hasSeenDashboard;
 	}
 
-	public boolean isHasSeenMap() {
-		return hasSeenMap;
+	public boolean isHasSeenMapAsMember() {
+		return hasSeenMapAsMember;
 	}
 
-	public void setHasSeenMap(boolean hasSeenMap) {
-		this.hasSeenMap = hasSeenMap;
+	public void setHasSeenMapAsMember(boolean hasSeenMapAsMember) {
+		this.hasSeenMapAsMember = hasSeenMapAsMember;
+	}
+
+	public boolean isHasSeenMapAsOwner() {
+		return hasSeenMapAsOwner;
+	}
+
+	public void setHasSeenMapAsOwner(boolean hasSeenMapAsOwner) {
+		this.hasSeenMapAsOwner = hasSeenMapAsOwner;
 	}
 }

@@ -15,7 +15,9 @@ public class UserPatchDTO {
 
 	private Boolean hasSeenDashboard;
 
-	private Boolean hasSeenMap;
+	private Boolean hasSeenMapAsMember;
+
+	private Boolean hasSeenMapAsOwner;
 
 	public Long getId() {
 		return id;
@@ -65,11 +67,19 @@ public class UserPatchDTO {
 		this.hasSeenDashboard = hasSeenDashboard;
 	}
 
-	public Boolean getHasSeenMap() {
-		return hasSeenMap;
+	public Boolean getHasSeenMapAsMember() {
+		return hasSeenMapAsMember;
 	}
 
-	public void setHasSeenMap(Boolean hasSeenMap) {
-		this.hasSeenMap = hasSeenMap;
+	public void setHasSeenMapAsMember(Boolean hasSeenMapAsMember) {
+		this.hasSeenMapAsMember = hasSeenMapAsMember;
+	}
+
+	public Boolean getHasSeenMapAsOwner() {
+		return hasSeenMapAsOwner;
+	}
+
+	public void setHasSeenMapAsOwner(Boolean hasSeenMapAsOwner) {
+		this.hasSeenMapAsOwner = hasSeenMapAsOwner;
 	}
 }

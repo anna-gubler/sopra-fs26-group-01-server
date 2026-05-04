@@ -56,7 +56,10 @@ public class User implements Serializable {
 	private boolean hasSeenDashboard = false;
 
 	@Column(nullable = false)
-	private boolean hasSeenMap = false;
+	private boolean hasSeenMapAsMember = false;
+
+	@Column(nullable = false)
+	private boolean hasSeenMapAsOwner = false;
 
 	public Long getId() {
 		return id;
@@ -138,11 +141,19 @@ public class User implements Serializable {
 		this.hasSeenDashboard = hasSeenDashboard;
 	}
 
-	public boolean isHasSeenMap() {
-		return hasSeenMap;
+	public boolean isHasSeenMapAsMember() {
+		return hasSeenMapAsMember;
 	}
 
-	public void setHasSeenMap(boolean hasSeenMap) {
-		this.hasSeenMap = hasSeenMap;
+	public void setHasSeenMapAsMember(boolean hasSeenMapAsMember) {
+		this.hasSeenMapAsMember = hasSeenMapAsMember;
+	}
+
+	public boolean isHasSeenMapAsOwner() {
+		return hasSeenMapAsOwner;
+	}
+
+	public void setHasSeenMapAsOwner(boolean hasSeenMapAsOwner) {
+		this.hasSeenMapAsOwner = hasSeenMapAsOwner;
 	}
 }
