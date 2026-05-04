@@ -6,6 +6,7 @@ import tools.jackson.core.JacksonException;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
@@ -15,10 +16,15 @@ import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -317,6 +323,93 @@ public class SkillMapControllerTest {
                 .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
+    }
+
+    // GET /skillmaps/{skillMapId}/export
+    // Test: valid token returns 200 with Content-Disposition attachment header
+    @Test
+    public void givenValidToken_whenExportSkillMap_thenReturnOkWithAttachment() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        SkillMapExportDTO exportDTO = new SkillMapExportDTO();
+        exportDTO.setTitle("Test Map");
+        exportDTO.setSkills(new ArrayList<>());
+        exportDTO.setDependencies(new ArrayList<>());
+
+        given(skillMapService.exportSkillMap(eq(1L), any())).willReturn(exportDTO);
+
+        mockMvc.perform(get("/skillmaps/1/export")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        org.hamcrest.Matchers.containsString(".json")));
+    }
+
+    // Test: non-existent skill map ID returns 404
+    @Test
+    public void givenInvalidId_whenExportSkillMap_thenReturnNotFound() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(skillMapService.exportSkillMap(eq(999L), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(get("/skillmaps/999/export")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    // Test: non-member trying to export a private map is rejected with 403
+    @Test
+    public void givenNonMember_whenExportPrivateSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(skillMapService.exportSkillMap(eq(1L), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
+
+        mockMvc.perform(get("/skillmaps/1/export")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    // POST /skillmaps/import
+    @Test
+    public void givenValidFile_whenImportSkillMap_thenReturnCreated() throws Exception {
+        mockAuthentication(buildUser(), true);
+        SkillMap created = newSkillMap();
+        given(skillMapService.importSkillMap(any(), any())).willReturn(created);
+
+        SkillMapExportDTO exportDTO = new SkillMapExportDTO();
+        exportDTO.setTitle("Imported Map");
+        exportDTO.setNumberOfLevels(3);
+        exportDTO.setIsPublic(false);
+        exportDTO.setSkills(new ArrayList<>());
+        exportDTO.setDependencies(new ArrayList<>());
+
+        String json = asJsonString(exportDTO);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "skillmap.json", MediaType.APPLICATION_JSON_VALUE, json.getBytes());
+
+        mockMvc.perform(multipart("/skillmaps/import")
+                .file(file)
+                .header("Authorization", TOKEN))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    public void givenInvalidFile_whenImportSkillMap_thenReturnBadRequest() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "broken.json", MediaType.APPLICATION_JSON_VALUE, 
+                "not valid json {{{".getBytes());
+
+        mockMvc.perform(multipart("/skillmaps/import")
+                .file(file)
+                .header("Authorization", TOKEN))
+                .andExpect(status().isBadRequest());
     }
 
     private String asJsonString(final Object object) {

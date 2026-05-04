@@ -1,11 +1,19 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
+import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +39,12 @@ class SkillMapServiceTest {
 
     @Mock
     private SkillMapMembershipRepository skillMapMembershipRepository;
+
+    @Mock
+    private SkillRepository skillRepository;
+    
+    @Mock
+    private DependencyRepository dependencyRepository;
 
     // Still needed: getMembers() calls userService.getUserById() internally.
     @Mock
@@ -385,5 +399,164 @@ class SkillMapServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> skillMapService.removeMember(10L, otherUser.getId(), owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ─── 1101  exportSkillMap ─────────────────────────────────────────────────
+    
+    @Test
+    void exportSkillMap_validRequest_returnsDTOWithCorrectStructure() {
+        Skill skill1 = new Skill();
+        skill1.setId(1L);
+        skill1.setName("Variables");
+        skill1.setDescription("Basic variables");
+        skill1.setDifficulty("EASY");
+        skill1.setLevel(1);
+
+        Skill skill2 = new Skill();
+        skill2.setId(2L);
+        skill2.setName("Control Flow");
+        skill2.setDescription("If/else");
+        skill2.setDifficulty("MEDIUM");
+        skill2.setLevel(2);
+
+        Dependency dep = new Dependency();
+        dep.setFromSkill(skill1);
+        dep.setToSkill(skill2); 
+
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
+                .willReturn(true);
+        given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill1, skill2));
+        given(dependencyRepository.findByFromSkill_IdIn(List.of(1L, 2L)))
+                .willReturn(List.of(dep));
+
+        SkillMapExportDTO result = skillMapService.exportSkillMap(10L, owner);
+
+        assertEquals("Test Map", result.getTitle());
+        assertEquals(2, result.getSkills().size());
+        assertEquals(1, result.getDependencies().size());
+        assertEquals("skill-1", result.getSkills().get(0).getExportId());
+        assertEquals("skill-2", result.getSkills().get(1).getExportId());
+        assertEquals("skill-1", result.getDependencies().get(0).getFromExportId());
+        assertEquals("skill-2", result.getDependencies().get(0).getToExportId());
+        }
+
+    @Test
+    void exportSkillMap_notFound_throws404() {
+        given(skillMapRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.exportSkillMap(99L, owner));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void exportSkillMap_privateMap_nonMember_throws403() {
+        skillMap.setIsPublic(false);
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
+                .willReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.exportSkillMap(10L, otherUser));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
+    void exportSkillMap_noSkillsNoDependencies_returnsEmptyLists() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
+                .willReturn(true);
+        given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of());
+        given(dependencyRepository.findByFromSkill_IdIn(List.of())).willReturn(List.of());
+
+        SkillMapExportDTO result = skillMapService.exportSkillMap(10L, owner);
+
+        assertEquals("Test Map", result.getTitle());
+        assertTrue(result.getSkills().isEmpty());
+        assertTrue(result.getDependencies().isEmpty());
+    }
+    // ─── 1102  importSkillMap ─────────────────────────────────────────────────
+    private SkillMapExportDTO buildValidImportDTO() {
+        SkillExportDTO s1 = new SkillExportDTO();
+        s1.setExportId("skill-1");
+        s1.setName("Variables");
+        s1.setDifficulty("EASY");
+        s1.setLevel(1);
+        s1.setIsLocked(false);
+
+        SkillExportDTO s2 = new SkillExportDTO();
+        s2.setExportId("skill-2");
+        s2.setName("Control Flow");
+        s2.setDifficulty("MEDIUM");
+        s2.setLevel(2);
+        s2.setIsLocked(false);
+
+        DependencyExportDTO dep = new DependencyExportDTO();
+        dep.setFromExportId("skill-1");
+        dep.setToExportId("skill-2");
+
+        SkillMapExportDTO dto = new SkillMapExportDTO();
+        dto.setTitle("Imported Map");
+        dto.setDescription("Some description");
+        dto.setNumberOfLevels(3);
+        dto.setIsPublic(false);
+        dto.setSkills(List.of(s1, s2));
+        dto.setDependencies(List.of(dep));
+        return dto;
+        }
+
+    @Test
+    void importSkillMap_validDTO_createsSkillMapWithSkillsAndDependencies() {
+        given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+        given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
+
+        Skill savedSkill1 = new Skill();
+        savedSkill1.setId(1L);
+        Skill savedSkill2 = new Skill();
+        savedSkill2.setId(2L);
+        given(skillRepository.save(any(Skill.class)))
+                .willReturn(savedSkill1, savedSkill2);
+        given(skillRepository.findById(1L)).willReturn(Optional.of(savedSkill1));
+        given(skillRepository.findById(2L)).willReturn(Optional.of(savedSkill2));
+
+        SkillMap result = skillMapService.importSkillMap(buildValidImportDTO(), owner);
+
+        assertNotNull(result);
+        verify(skillRepository, times(2)).save(any(Skill.class));
+        verify(dependencyRepository, times(1)).save(any(Dependency.class));
+    }
+
+    @Test
+    void importSkillMap_missingTitle_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        dto.setTitle(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void importSkillMap_nullSkillsList_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        dto.setSkills(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void importSkillMap_brokenEdge_throws400() {
+        SkillMapExportDTO dto = buildValidImportDTO();
+        DependencyExportDTO brokenDep = new DependencyExportDTO();
+        brokenDep.setFromExportId("skill-1");
+        brokenDep.setToExportId("skill-99"); // existiert nicht
+        dto.setDependencies(List.of(brokenDep));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.importSkillMap(dto, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 }
