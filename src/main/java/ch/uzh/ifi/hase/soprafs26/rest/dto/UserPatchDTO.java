@@ -13,6 +13,12 @@ public class UserPatchDTO {
 
     private String token;
 
+	private Boolean hasSeenDashboard;
+
+	private Boolean hasSeenMapAsMember;
+
+	private Boolean hasSeenMapAsOwner;
+
 	public Long getId() {
 		return id;
 	}
@@ -52,4 +58,28 @@ public class UserPatchDTO {
     public void setToken(String token) {
         this.token = token;
     }
+
+	public Boolean getHasSeenDashboard() {
+		return hasSeenDashboard;
+	}
+
+	public void setHasSeenDashboard(Boolean hasSeenDashboard) {
+		this.hasSeenDashboard = hasSeenDashboard;
+	}
+
+	public Boolean getHasSeenMapAsMember() {
+		return hasSeenMapAsMember;
+	}
+
+	public void setHasSeenMapAsMember(Boolean hasSeenMapAsMember) {
+		this.hasSeenMapAsMember = hasSeenMapAsMember;
+	}
+
+	public Boolean getHasSeenMapAsOwner() {
+		return hasSeenMapAsOwner;
+	}
+
+	public void setHasSeenMapAsOwner(Boolean hasSeenMapAsOwner) {
+		this.hasSeenMapAsOwner = hasSeenMapAsOwner;
+	}
 }
