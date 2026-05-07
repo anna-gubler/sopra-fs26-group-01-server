@@ -37,6 +37,7 @@ public class QuizAttempt {
 
     private LocalDateTime cooldownUntil;
 
+    public void setId(Long id) { this.id = id; }
     public Long getId() { return id; }
 
     public Long getUserId() { return userId; }

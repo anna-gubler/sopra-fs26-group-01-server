@@ -150,21 +150,18 @@ public interface DTOMapper {
     @Mapping(source = "id", target = "id")
     QuizGetDTO convertQuizEntityToQuizGetDTO(Quiz quiz);
 
-    @Mapping(source = "id", target = "id")
     Quiz convertQuizPostDTOToQuizEntity(QuizPostDTO quizPostDTO);
 
     // QuizQuestion
     @Mapping(source = "id", target = "id")
     QuizQuestionGetDTO convertQuizQuestionEntityToQuizQuestionGetDTO(QuizQuestion quizQuestion);
 
-    @Mapping(source = "quizQuestionText", target = "quizQuestionText")
     QuizQuestion convertQuizQuestionPostDTOToQuizQuestionEntity(QuizQuestionPostDTO quizQuestionPostDTO);
 
     // QuizAnswer
     @Mapping(source = "id", target = "id")
     QuizAnswerGetDTO convertQuizAnswerEntityToQuizAnswerGetDTO(QuizAnswer quizAnswer);
 
-    @Mapping(source = "answerText", target = "answerText")
     QuizAnswer convertQuizAnswerPostDTOToQuizAnswerEntity(QuizAnswerPostDTO quizAnswerPostDTO);
 
     // QuizAttempt

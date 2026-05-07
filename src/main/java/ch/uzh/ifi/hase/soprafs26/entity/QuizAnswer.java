@@ -35,6 +35,7 @@ public class QuizAnswer {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    public void setId(Long id) { this.id = id; }
     public Long getId() { return id; }
 
     public Long getQuizQuestionId() { return quizQuestionId; }
