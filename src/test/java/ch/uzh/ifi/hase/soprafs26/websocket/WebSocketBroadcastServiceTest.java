@@ -2,6 +2,8 @@ package ch.uzh.ifi.hase.soprafs26.websocket;
 
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionEndedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionStartedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.UnderstandingRequestedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.UnderstandingUpdatedMessageDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -87,5 +89,53 @@ public class WebSocketBroadcastServiceTest {
         assertEquals("SESSION_ENDED", payload.getType());
         assertEquals(SESSION_ID, payload.getSessionId());
         assertEquals(endedAt, payload.getEndedAt());
+    }
+
+
+    // --- broadcastUnderstandingRequested ---
+
+    @Test
+    public void broadcastUnderstandingRequested_sendsToCorrectTopic() {
+        broadcastService.broadcastUnderstandingRequested(SKILL_MAP_ID);
+
+        ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
+        verify(messagingTemplate, times(1)).convertAndSend(topicCaptor.capture(), (Object) any());
+        assertEquals("/topic/skillmaps/1/live", topicCaptor.getValue());
+    }
+
+    @Test
+    public void broadcastUnderstandingRequested_sendsCorrectPayload() {
+        broadcastService.broadcastUnderstandingRequested(SKILL_MAP_ID);
+
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(messagingTemplate, times(1)).convertAndSend(any(String.class), payloadCaptor.capture());
+
+        UnderstandingRequestedMessageDTO payload = (UnderstandingRequestedMessageDTO) payloadCaptor.getValue();
+        assertEquals("UNDERSTANDING_REQUESTED", payload.getType());
+    }
+
+
+    // --- broadcastUnderstandingUpdated ---
+
+    @Test
+    public void broadcastUnderstandingUpdated_sendsToCorrectTopic() {
+        broadcastService.broadcastUnderstandingUpdated(SKILL_MAP_ID, 75.0, 10);
+
+        ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
+        verify(messagingTemplate, times(1)).convertAndSend(topicCaptor.capture(), (Object) any());
+        assertEquals("/topic/skillmaps/1/live", topicCaptor.getValue());
+    }
+
+    @Test
+    public void broadcastUnderstandingUpdated_sendsCorrectPayload() {
+        broadcastService.broadcastUnderstandingUpdated(SKILL_MAP_ID, 75.0, 10);
+
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(messagingTemplate, times(1)).convertAndSend(any(String.class), payloadCaptor.capture());
+
+        UnderstandingUpdatedMessageDTO payload = (UnderstandingUpdatedMessageDTO) payloadCaptor.getValue();
+        assertEquals("UNDERSTANDING_UPDATED", payload.getType());
+        assertEquals(75.0, payload.getAverageRating());
+        assertEquals(10, payload.getTotalResponses());
     }
 }

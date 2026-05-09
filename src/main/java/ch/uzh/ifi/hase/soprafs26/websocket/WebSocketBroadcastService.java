@@ -10,6 +10,8 @@ import ch.uzh.ifi.hase.soprafs26.websocket.dto.RatingUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionEndedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SessionStartedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.SpeedUpdatedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.UnderstandingRequestedMessageDTO;
+import ch.uzh.ifi.hase.soprafs26.websocket.dto.UnderstandingUpdatedMessageDTO;
 import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.websocket.dto.QuestionsStateMessageDTO;
 
@@ -45,5 +47,15 @@ public class WebSocketBroadcastService {
     public void broadcastSpeedUpdated(long skillMapId, int tooFast, int tooSlow, int totalResponses) {
         String topic = String.format("/topic/skillmaps/%d/live", skillMapId);
         messagingTemplate.convertAndSend(topic, new SpeedUpdatedMessageDTO(tooFast, tooSlow, totalResponses));
+    }
+
+    public void broadcastUnderstandingRequested(long skillMapId) {
+        String topic = String.format("/topic/skillmaps/%d/live", skillMapId);
+        messagingTemplate.convertAndSend(topic, new UnderstandingRequestedMessageDTO());
+    }
+
+    public void broadcastUnderstandingUpdated(long skillMapId, double averageRating, int totalResponses) {
+        String topic = String.format("/topic/skillmaps/%d/live", skillMapId);
+        messagingTemplate.convertAndSend(topic, new UnderstandingUpdatedMessageDTO(averageRating, totalResponses));
     }
 }
