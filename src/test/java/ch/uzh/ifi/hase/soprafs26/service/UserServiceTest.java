@@ -82,6 +82,9 @@ public class UserServiceTest {
 		assertNotNull(createdUser.getToken());
 		assertNotEquals(RAW_PASSWORD, createdUser.getPassword());
 		assertNotNull(createdUser.getPassword());
+		assertFalse(createdUser.isHasSeenDashboard());
+		assertFalse(createdUser.isHasSeenMapAsMember());
+		assertFalse(createdUser.isHasSeenMapAsOwner());
 	}
 
 	@Test

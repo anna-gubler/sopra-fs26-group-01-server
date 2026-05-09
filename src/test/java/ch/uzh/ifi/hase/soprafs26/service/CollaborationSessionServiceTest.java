@@ -42,6 +42,9 @@ public class CollaborationSessionServiceTest {
     private SpeedFeedbackService speedFeedbackService;
 
     @Mock
+    private CurrentUnderstandingService currentUnderstandingService;
+
+    @Mock
     private SkillMapMembershipRepository membershipRepository;
 
     @InjectMocks
