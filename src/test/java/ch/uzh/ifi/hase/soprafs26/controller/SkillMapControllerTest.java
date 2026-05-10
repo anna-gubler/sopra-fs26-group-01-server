@@ -264,6 +264,23 @@ public class SkillMapControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // Test: joining a private skill map returns 403 Forbidden
+    @Test
+    public void givenPrivateSkillMap_whenJoinSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(skillMapService.joinSkillMap(any(), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "This skillmap is not public."));
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setInviteCode("VALIDCODE1");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isForbidden());
+    }
+
     // Test: joining a map the user is already a member of returns 409 Conflict
     @Test
     public void givenUserAlreadyMember_whenJoinSkillMap_thenReturnConflict() throws Exception {

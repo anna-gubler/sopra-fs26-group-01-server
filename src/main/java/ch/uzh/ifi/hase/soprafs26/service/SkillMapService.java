@@ -177,6 +177,10 @@ public class SkillMapService {
         SkillMap map = skillMapRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invite code is invalid."));
 
+        if (!Boolean.TRUE.equals(map.getIsPublic())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This skillmap is not public.");
+        }
+
         if (skillMapMembershipRepository.existsBySkillMapIdAndUserId(map.getId(), requester.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member of this skillmap.");
         }
