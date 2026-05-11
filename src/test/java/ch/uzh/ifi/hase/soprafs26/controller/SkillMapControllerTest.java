@@ -19,12 +19,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -259,6 +256,23 @@ public class SkillMapControllerTest {
 
         SkillMapJoinDTO dto = new SkillMapJoinDTO();
         dto.setInviteCode("WRONGCODE1");
+
+        mockMvc.perform(post("/skillmaps/join")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(dto)))
+                .andExpect(status().isForbidden());
+    }
+
+    // Test: joining a private skill map returns 403 Forbidden
+    @Test
+    public void givenPrivateSkillMap_whenJoinSkillMap_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(skillMapService.joinSkillMap(any(), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "This skillmap is not public."));
+
+        SkillMapJoinDTO dto = new SkillMapJoinDTO();
+        dto.setInviteCode("VALIDCODE1");
 
         mockMvc.perform(post("/skillmaps/join")
                 .header("Authorization", TOKEN)

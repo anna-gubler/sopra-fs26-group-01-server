@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -177,6 +176,10 @@ public class SkillMapService {
 
         SkillMap map = skillMapRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invite code is invalid."));
+
+        if (!Boolean.TRUE.equals(map.getIsPublic())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This skillmap is not public.");
+        }
 
         if (skillMapMembershipRepository.existsBySkillMapIdAndUserId(map.getId(), requester.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member of this skillmap.");

@@ -310,6 +310,16 @@ class SkillMapServiceTest {
     }
 
     @Test
+    void joinSkillMap_privateMap_throws403() {
+        skillMap.setIsPublic(false);
+        given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.joinSkillMap("INVITE1234", otherUser));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void joinSkillMap_alreadyMember_throws409() {
         given(skillMapRepository.findByInviteCode("INVITE1234")).willReturn(Optional.of(skillMap));
         given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId()))
