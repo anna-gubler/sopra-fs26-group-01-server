@@ -4,8 +4,11 @@ import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +52,15 @@ public class CollaborationSessionServiceTest {
 
     @InjectMocks
     private CollaborationSessionService sessionService;
+
+    @Mock
+    private SkillRepository skillRepository;
+
+    @Mock
+    private QuizRepository quizRepository;
+
+    @Mock
+    private QuizAttemptRepository quizAttemptRepository;
 
     @BeforeEach
     public void setup() {
@@ -197,5 +209,56 @@ public class CollaborationSessionServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.getActiveSession(SKILL_MAP_ID, buildOwner()));
+    }
+
+    // --- setPromptedQuiz ---
+
+    @Test
+    public void setPromptedQuiz_validOwner_setsSkillId() {
+        CollaborationSession session = buildActiveSession();
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(session));
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(session);
+
+        sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L);
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertEquals(42L, captor.getValue().getPromptedQuizSkillId());
+    }
+
+    @Test
+    public void setPromptedQuiz_nullSkillId_clearsPrompt() {
+        CollaborationSession session = buildActiveSession();
+        session.setPromptedQuizSkillId(42L);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(session));
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(session);
+
+        sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), null);
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertNull(captor.getValue().getPromptedQuizSkillId());
+    }
+
+    @Test
+    public void setPromptedQuiz_notOwner_throwsForbidden() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOtherUser(), 42L));
+    }
+
+    @Test
+    public void setPromptedQuiz_noActiveSession_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L));
     }
 }

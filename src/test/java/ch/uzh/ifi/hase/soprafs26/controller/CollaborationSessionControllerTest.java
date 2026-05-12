@@ -2,6 +2,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
@@ -16,6 +17,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 @WebMvcTest(CollaborationSessionController.class)
 public class CollaborationSessionControllerTest {
@@ -255,4 +258,107 @@ public class CollaborationSessionControllerTest {
         mockMvc.perform(postRequest)
                 .andExpect(status().isNotFound());
     }
+    // --- PUT /skillmaps/{skillMapId}/sessions/active/prompted-quiz ---
+    @Test
+    public void givenValidOwner_whenSetPromptedQuiz_thenReturnNoContent() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        MockHttpServletRequestBuilder putRequest = put("/skillmaps/{skillMapId}/sessions/active/prompted-quiz", SKILL_MAP_ID)
+                .header("Authorization", "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skillId\": 42}");
+
+        mockMvc.perform(putRequest)
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        public void givenNonOwner_whenSetPromptedQuiz_thenReturnForbidden() throws Exception {
+        mockAuthentication(buildUser(), true);
+        willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can prompt a quiz"))
+                .given(sessionService).setPromptedQuiz(eq(SKILL_MAP_ID), any(), any());
+
+        MockHttpServletRequestBuilder putRequest = put("/skillmaps/{skillMapId}/sessions/active/prompted-quiz", SKILL_MAP_ID)
+                .header("Authorization", "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skillId\": 42}");
+
+        mockMvc.perform(putRequest)
+                .andExpect(status().isForbidden());
+        }
+        @Test
+        public void givenNullSkillId_whenSetPromptedQuiz_thenReturnNoContent() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        MockHttpServletRequestBuilder putRequest = put("/skillmaps/{skillMapId}/sessions/active/prompted-quiz", SKILL_MAP_ID)
+                .header("Authorization", "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skillId\": null}");
+
+        mockMvc.perform(putRequest)
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        public void givenNoAuthorization_whenSetPromptedQuiz_thenReturnUnauthorized() throws Exception {
+        mockAuthentication(buildUser(), false);
+
+        MockHttpServletRequestBuilder putRequest = put("/skillmaps/{skillMapId}/sessions/active/prompted-quiz", SKILL_MAP_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skillId\": 42}");
+
+        mockMvc.perform(putRequest)
+                .andExpect(status().isUnauthorized());
+        }
+
+        // --- GET /skillmaps/{skillMapId}/sessions/active/quiz-results ---
+
+        @Test
+        public void givenActiveSession_whenGetQuizResults_thenReturnOk() throws Exception {
+        mockAuthentication(buildUser(), true);
+
+        DashboardQuizSummaryDTO summary = new DashboardQuizSummaryDTO();
+        summary.setQuizId(1L);
+        summary.setSkillId(2L);
+        summary.setTotalAttempts(5);
+        summary.setAverageScore(80.0);
+
+        given(sessionService.getQuizResults(eq(SKILL_MAP_ID), any())).willReturn(List.of(summary));
+
+        MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active/quiz-results", SKILL_MAP_ID)
+                .header("Authorization", "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(getRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].quizId", is(1)))
+                .andExpect(jsonPath("$[0].skillId", is(2)))
+                .andExpect(jsonPath("$[0].totalAttempts", is(5)))
+                .andExpect(jsonPath("$[0].averageScore", is(80.0)));
+        }
+
+        @Test
+        public void givenNoActiveSession_whenGetQuizResults_thenReturnNotFound() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(sessionService.getQuizResults(eq(SKILL_MAP_ID), any()))
+                .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"));
+
+        MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active/quiz-results", SKILL_MAP_ID)
+                .header("Authorization", "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(getRequest)
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        public void givenNoAuthorization_whenGetQuizResults_thenReturnUnauthorized() throws Exception {
+        mockAuthentication(buildUser(), false);
+
+        MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active/quiz-results", SKILL_MAP_ID)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(getRequest)
+                .andExpect(status().isUnauthorized());
+        }
 }
