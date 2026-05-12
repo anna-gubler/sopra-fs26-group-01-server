@@ -2,8 +2,13 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,5 +41,23 @@ public class CollaborationSessionController {
     public void endSession(@PathVariable Long skillMapId, HttpServletRequest request) {
         User user = (User) request.getAttribute("authenticatedUser");
         sessionService.endSession(skillMapId, user);
+    }
+
+    @PutMapping("/active/prompted-quiz")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setPromptedQuiz(@PathVariable Long skillMapId,
+                                @RequestBody Map<String, Object> body,
+                                HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        Long skillId = body.get("skillId") != null ? ((Number) body.get("skillId")).longValue() : null;
+        sessionService.setPromptedQuiz(skillMapId, user, skillId);
+    }
+
+    @GetMapping("/active/quiz-results")
+    @ResponseStatus(HttpStatus.OK)
+    public List<DashboardQuizSummaryDTO> getQuizResults(@PathVariable Long skillMapId,
+                                                        HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return sessionService.getQuizResults(skillMapId, user);
     }
 }
