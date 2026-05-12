@@ -10,6 +10,7 @@ public class SkillExportDTO {
     private Float positionX;
     private Boolean isLocked;
     private Long skillMapId;
+    private QuizExportDTO quiz;
 
     public String getExportId() { return exportId; }
     public void setExportId(String exportId) { this.exportId = exportId; }
@@ -37,4 +38,7 @@ public class SkillExportDTO {
 
     public Long getSkillMapId() { return skillMapId; }
     public void setSkillMapId(Long skillMapId) { this.skillMapId = skillMapId; }
+
+    public QuizExportDTO getQuiz() { return quiz; }
+    public void setQuiz(QuizExportDTO quiz) { this.quiz = quiz; }
 }

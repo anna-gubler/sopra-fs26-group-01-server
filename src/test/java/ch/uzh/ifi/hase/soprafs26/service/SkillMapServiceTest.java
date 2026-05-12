@@ -7,6 +7,9 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizAnswerRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizQuestionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
@@ -46,12 +49,19 @@ class SkillMapServiceTest {
     @Mock
     private DependencyRepository dependencyRepository;
 
-    // Still needed: getMembers() calls userService.getUserById() internally.
     @Mock
     private UserService userService;
 
     @InjectMocks
     private SkillMapService skillMapService;
+
+    @Mock
+    private QuizRepository quizRepository;
+    @Mock
+    private QuizQuestionRepository quizQuestionRepository;
+    
+    @Mock
+    private QuizAnswerRepository quizAnswerRepository;
 
     // ─── shared fixtures ──────────────────────────────────────────────────────
 
@@ -439,7 +449,7 @@ class SkillMapServiceTest {
         given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill1, skill2));
         given(dependencyRepository.findByFromSkill_IdIn(List.of(1L, 2L)))
                 .willReturn(List.of(dep));
-
+        given(quizRepository.findBySkillId(any())).willReturn(Optional.empty());
         SkillMapExportDTO result = skillMapService.exportSkillMap(10L, owner);
 
         assertEquals("Test Map", result.getTitle());
@@ -479,7 +489,6 @@ class SkillMapServiceTest {
                 .willReturn(true);
         given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of());
         given(dependencyRepository.findByFromSkill_IdIn(List.of())).willReturn(List.of());
-
         SkillMapExportDTO result = skillMapService.exportSkillMap(10L, owner);
 
         assertEquals("Test Map", result.getTitle());
@@ -520,7 +529,7 @@ class SkillMapServiceTest {
     void importSkillMap_validDTO_createsSkillMapWithSkillsAndDependencies() {
         given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
         given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
-
+        
         Skill savedSkill1 = new Skill();
         savedSkill1.setId(1L);
         Skill savedSkill2 = new Skill();

@@ -19,16 +19,25 @@ import org.springframework.web.server.ResponseStatusException;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
 import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizAnswer;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizAnswerRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizQuestionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAnswerExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizQuestionExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
@@ -44,16 +53,25 @@ public class SkillMapService {
     private final SkillMapMembershipRepository skillMapMembershipRepository;
     private final SkillRepository skillRepository;
     private final DependencyRepository dependencyRepository;
+    private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+    private final QuizAnswerRepository quizAnswerRepository;
 
     public SkillMapService(
             @Qualifier("skillMapRepository") SkillMapRepository skillMapRepository,
             @Qualifier("skillRepository") SkillRepository skillRepository,
             @Qualifier("skillMapMembershipRepository") SkillMapMembershipRepository skillMapMembershipRepository,
-            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository) {
+            @Qualifier("dependencyRepository") DependencyRepository dependencyRepository,
+            @Qualifier("quizRepository") QuizRepository quizRepository,
+            @Qualifier("quizQuestionRepository") QuizQuestionRepository quizQuestionRepository,
+            @Qualifier("quizAnswerRepository") QuizAnswerRepository quizAnswerRepository) {
         this.skillMapRepository = skillMapRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
         this.skillRepository = skillRepository;
         this.dependencyRepository = dependencyRepository;
+        this.quizRepository = quizRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
+        this.quizAnswerRepository = quizAnswerRepository;
     }
 
     // 201 - returns only maps the requester is a member of (spec 201.1)
@@ -272,16 +290,46 @@ public class SkillMapService {
             dto.setPositionX(skill.getPositionX());
             dto.setIsLocked(skill.getIsLocked());
             exportIdMap.put(skill.getId(), dto.getExportId());
+
+            // Quiz exportieren falls vorhanden
+            quizRepository.findBySkillId(skill.getId()).ifPresent(quiz -> {
+                QuizExportDTO quizDTO = new QuizExportDTO();
+                quizDTO.setIsActive(quiz.getIsActive());
+                quizDTO.setCooldownHours(quiz.getCooldownHours());
+                quizDTO.setPassMark(quiz.getPassMark());
+
+                List<QuizQuestionExportDTO> questionDTOs = new ArrayList<>();
+                for (QuizQuestion q : quizQuestionRepository.findByQuizId(quiz.getId())) {
+                    QuizQuestionExportDTO qDTO = new QuizQuestionExportDTO();
+                    qDTO.setQuizQuestionText(q.getQuizQuestionText());
+                    qDTO.setOrderIndex(q.getOrderIndex());
+
+                    List<QuizAnswerExportDTO> answerDTOs = new ArrayList<>();
+                    for (QuizAnswer a : quizAnswerRepository.findByQuizQuestionId(q.getId())) {
+                        QuizAnswerExportDTO aDTO = new QuizAnswerExportDTO();
+                        aDTO.setAnswerText(a.getAnswerText());
+                        aDTO.setIsCorrect(a.getIsCorrect());
+                        answerDTOs.add(aDTO);
+                    }
+                    qDTO.setAnswers(answerDTOs);
+                    questionDTOs.add(qDTO);
+                }
+
+                quizDTO.setQuestions(questionDTOs);
+                dto.setQuiz(quizDTO);
+            });
+
             skillDTOs.add(dto);
-        }
+        } // ← for-Schleife endet hier
 
         List<DependencyExportDTO> depDTOs = new ArrayList<>();
         for (Dependency dep : dependencies) {
-            DependencyExportDTO dto = new DependencyExportDTO();
-            dto.setFromExportId(exportIdMap.get(dep.getFromSkill().getId()));
-            dto.setToExportId(exportIdMap.get(dep.getToSkill().getId()));
-            depDTOs.add(dto);
+            DependencyExportDTO depDTO = new DependencyExportDTO();
+            depDTO.setFromExportId(exportIdMap.get(dep.getFromSkill().getId()));
+            depDTO.setToExportId(exportIdMap.get(dep.getToSkill().getId()));
+            depDTOs.add(depDTO);
         }
+
         SkillMapExportDTO exportDTO = new SkillMapExportDTO();
         exportDTO.setTitle(skillMap.getTitle());
         exportDTO.setNumberOfLevels(skillMap.getNumberOfLevels());
@@ -291,58 +339,88 @@ public class SkillMapService {
         exportDTO.setDependencies(depDTOs);
         return exportDTO;
     }
-
     public SkillMap importSkillMap(SkillMapExportDTO importDTO, User requester) {
-    if (importDTO.getTitle() == null || importDTO.getTitle().isBlank()) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required.");
-    }
-    if (importDTO.getSkills() == null) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Skills list is required.");
-    }
-    
-    Set<String> exportIds = importDTO.getSkills().stream()
-            .map(SkillExportDTO::getExportId)
-            .collect(Collectors.toSet());
-    for (DependencyExportDTO dep : importDTO.getDependencies()) {
-        if (!exportIds.contains(dep.getFromExportId()) || 
-            !exportIds.contains(dep.getToExportId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "Broken edge: references non-existent skill.");
+        if (importDTO.getTitle() == null || importDTO.getTitle().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required.");
         }
-    }
+        if (importDTO.getSkills() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Skills list is required.");
+        }
 
-    SkillMap newMap = new SkillMap();
-    newMap.setTitle(importDTO.getTitle());
-    newMap.setDescription(importDTO.getDescription());
-    newMap.setIsPublic(importDTO.getIsPublic() != null ? importDTO.getIsPublic() : false);
-    newMap.setNumberOfLevels(importDTO.getNumberOfLevels() != null ? importDTO.getNumberOfLevels() : 1);
-    newMap = createSkillMap(newMap, requester);
+        Set<String> exportIds = importDTO.getSkills().stream()
+                .map(SkillExportDTO::getExportId)
+                .collect(Collectors.toSet());
+        for (DependencyExportDTO dep : importDTO.getDependencies()) {
+            if (!exportIds.contains(dep.getFromExportId()) ||
+                !exportIds.contains(dep.getToExportId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Broken edge: references non-existent skill.");
+            }
+        }
 
-    Map<String, Long> exportIdToNewId = new HashMap<>();
-    for (SkillExportDTO skillDTO : importDTO.getSkills()) {
-        Skill skill = new Skill();
-        skill.setName(skillDTO.getName());
-        skill.setDescription(skillDTO.getDescription());
-        skill.setResources(skillDTO.getResources());
-        skill.setDifficulty(skillDTO.getDifficulty());
-        skill.setLevel(skillDTO.getLevel());
-        skill.setPositionX(skillDTO.getPositionX());
-        skill.setIsLocked(skillDTO.getIsLocked() != null ? skillDTO.getIsLocked() : false);
-        skill.setSkillMap(newMap);
-        skill = skillRepository.save(skill);
-        exportIdToNewId.put(skillDTO.getExportId(), skill.getId());
-    }
-    for (DependencyExportDTO depDTO : importDTO.getDependencies()) {
-        Skill fromSkill = skillRepository.findById(exportIdToNewId.get(depDTO.getFromExportId()))
-                .orElseThrow();
-        Skill toSkill = skillRepository.findById(exportIdToNewId.get(depDTO.getToExportId()))
-                .orElseThrow();
-        Dependency dep = new Dependency();
-        dep.setFromSkill(fromSkill);
-        dep.setToSkill(toSkill);
-        dependencyRepository.save(dep);
-    }
+        SkillMap newMap = new SkillMap();
+        newMap.setTitle(importDTO.getTitle());
+        newMap.setDescription(importDTO.getDescription());
+        newMap.setIsPublic(importDTO.getIsPublic() != null ? importDTO.getIsPublic() : false);
+        newMap.setNumberOfLevels(importDTO.getNumberOfLevels() != null ? importDTO.getNumberOfLevels() : 1);
+        newMap = createSkillMap(newMap, requester);
 
-    return newMap;
+        Map<String, Long> exportIdToNewId = new HashMap<>();
+        for (SkillExportDTO skillDTO : importDTO.getSkills()) {
+            Skill skill = new Skill();
+            skill.setName(skillDTO.getName());
+            skill.setDescription(skillDTO.getDescription());
+            skill.setResources(skillDTO.getResources());
+            skill.setDifficulty(skillDTO.getDifficulty());
+            skill.setLevel(skillDTO.getLevel());
+            skill.setPositionX(skillDTO.getPositionX());
+            skill.setIsLocked(skillDTO.getIsLocked() != null ? skillDTO.getIsLocked() : false);
+            skill.setSkillMap(newMap);
+            skill = skillRepository.save(skill);
+            exportIdToNewId.put(skillDTO.getExportId(), skill.getId());
+
+            if (skillDTO.getQuiz() != null) {
+                QuizExportDTO quizDTO = skillDTO.getQuiz();
+                Quiz quiz = new Quiz();
+                quiz.setSkillId(skill.getId());
+                quiz.setIsActive(quizDTO.getIsActive() != null ? quizDTO.getIsActive() : false);
+                quiz.setCooldownHours(quizDTO.getCooldownHours());
+                quiz.setPassMark(quizDTO.getPassMark());
+                quiz = quizRepository.save(quiz);
+
+                if (quizDTO.getQuestions() != null) {
+                    for (QuizQuestionExportDTO qDTO : quizDTO.getQuestions()) {
+                        QuizQuestion question = new QuizQuestion();
+                        question.setQuizId(quiz.getId());
+                        question.setQuizQuestionText(qDTO.getQuizQuestionText());
+                        question.setOrderIndex(qDTO.getOrderIndex());
+                        question = quizQuestionRepository.save(question);
+
+                        if (qDTO.getAnswers() != null) {
+                            for (QuizAnswerExportDTO aDTO : qDTO.getAnswers()) {
+                                QuizAnswer answer = new QuizAnswer();
+                                answer.setQuizQuestionId(question.getId());
+                                answer.setAnswerText(aDTO.getAnswerText());
+                                answer.setIsCorrect(aDTO.getIsCorrect() != null ? aDTO.getIsCorrect() : false);
+                                quizAnswerRepository.save(answer);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (DependencyExportDTO depDTO : importDTO.getDependencies()) {
+            Skill fromSkill = skillRepository.findById(exportIdToNewId.get(depDTO.getFromExportId()))
+                    .orElseThrow();
+            Skill toSkill = skillRepository.findById(exportIdToNewId.get(depDTO.getToExportId()))
+                    .orElseThrow();
+            Dependency dep = new Dependency();
+            dep.setFromSkill(fromSkill);
+            dep.setToSkill(toSkill);
+            dependencyRepository.save(dep);
+        }
+
+        return newMap;
     }
 }
