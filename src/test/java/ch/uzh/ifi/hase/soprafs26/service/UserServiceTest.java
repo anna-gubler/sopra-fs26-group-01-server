@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -61,6 +62,24 @@ public class UserServiceTest {
 		user.setToken(TEST_TOKEN);
 		user.setStatus(UserStatus.ONLINE);
 		return user;
+	}
+
+
+	// --- getUsers ---
+
+	@Test
+	public void getUsers_returnsAllUsers() {
+		User user1 = buildPersistedUser();
+		User user2 = buildPersistedUser();
+		user2.setId(2L);
+		user2.setUsername("otherUser");
+
+		Mockito.when(userRepository.findAll()).thenReturn(List.of(user1, user2));
+
+		List<User> result = userService.getUsers();
+
+		assertEquals(2, result.size());
+		Mockito.verify(userRepository, Mockito.times(1)).findAll();
 	}
 
 
@@ -270,13 +289,93 @@ public class UserServiceTest {
 	@Test
 	public void createUser_avatarGeneration_success() {
     	User input = buildNewUser();
-    
+
     	Mockito.when(userRepository.save(Mockito.any())).thenReturn(input);
-    
+
     	User createdUser = userService.createUser(input);
 
     	assertEquals(TEST_USERNAME, createdUser.getSeed());
     	assertEquals("bottts-neutral", createdUser.getStyle());
-	}	
+	}
+
+
+	//getUserByUsername
+
+	@Test
+	public void getUserByUsername_userExists_returnsUser() {
+		Mockito.when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(buildPersistedUser()));
+
+		User result = userService.getUserByUsername(TEST_USERNAME);
+
+		assertEquals(TEST_USERNAME, result.getUsername());
+		assertEquals(TEST_ID, result.getId());
+	}
+
+	@Test
+	public void getUserByUsername_notFound_throwsException() {
+		Mockito.when(userRepository.findByUsername(Mockito.any())).thenReturn(Optional.empty());
+
+		assertThrows(ResponseStatusException.class, () -> userService.getUserByUsername("nobody"));
+	}
+
+
+	//changeUserAvatar
+
+	@Test
+	public void changeUserAvatar_updatesStyleAndSeed() {
+		User requestingUser = buildPersistedUser();
+
+		User input = new User();
+		input.setStyle("pixel-art");
+		input.setSeed("customSeed");
+
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+		User result = userService.changeUserAvatar(requestingUser, input);
+
+		assertEquals("pixel-art", result.getStyle());
+		assertEquals("customSeed", result.getSeed());
+	}
+
+
+	// changePassword
+
+	@Test
+	public void changePassword_validInput_updatesPassword() {
+		User managedUser = buildPersistedUser();
+		Mockito.when(userRepository.findById(TEST_ID)).thenReturn(Optional.of(managedUser));
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+		userService.changePassword(managedUser, RAW_PASSWORD, "newPassword123", "newPassword123");
+
+		Mockito.verify(userRepository).saveAndFlush(managedUser);
+	}
+
+	@Test
+	public void changePassword_wrongOldPassword_throwsException() {
+		User managedUser = buildPersistedUser();
+		Mockito.when(userRepository.findById(TEST_ID)).thenReturn(Optional.of(managedUser));
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(managedUser, "wrongOld", "newPassword123", "newPassword123"));
+	}
+
+	@Test
+	public void changePassword_newPasswordSameAsOld_throwsException() {
+		User managedUser = buildPersistedUser();
+		Mockito.when(userRepository.findById(TEST_ID)).thenReturn(Optional.of(managedUser));
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(managedUser, RAW_PASSWORD, RAW_PASSWORD, RAW_PASSWORD));
+	}
+
+	@Test
+	public void changePassword_confirmMismatch_throwsException() {
+		User managedUser = buildPersistedUser();
+		Mockito.when(userRepository.findById(TEST_ID)).thenReturn(Optional.of(managedUser));
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(managedUser, RAW_PASSWORD, "newPass1", "newPass2"));
+	}
 
 }

@@ -190,6 +190,20 @@ class QuizServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
+    @Test
+    void updateQuiz_invalidPassMark_throws400() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        Quiz updates = new Quiz();
+        updates.setPassMark(150);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizService.updateQuiz(30L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
     // ─── 904 deleteQuiz ───────────────────────────────────────────────────────
 
     @Test

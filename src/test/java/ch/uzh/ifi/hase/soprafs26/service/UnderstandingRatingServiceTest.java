@@ -155,4 +155,57 @@ public class UnderstandingRatingServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> ratingService.getRatingsBySession(SESSION_ID, buildOtherUser()));
     }
+
+    @Test
+    public void submitRating_sessionNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.submitRating(SESSION_ID, SKILL_ID, buildOwner(), 50));
+    }
+
+    @Test
+    public void submitRating_skillNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.submitRating(SESSION_ID, SKILL_ID, buildOwner(), 50));
+    }
+
+    @Test
+    public void submitRating_updateExisting_updatesUpdatedAt() {
+        UnderstandingRating existing = new UnderstandingRating();
+        existing.setId(99L);
+        existing.setRating(40);
+
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(new Skill()));
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(ratingRepository.findBySessionIdAndSkillIdAndUserId(SESSION_ID, SKILL_ID, OWNER_ID))
+                .thenReturn(Optional.of(existing));
+        Mockito.when(ratingRepository.findBySessionIdAndSkillId(SESSION_ID, SKILL_ID)).thenReturn(List.of(existing));
+        Mockito.when(ratingRepository.save(Mockito.any())).thenAnswer(i -> i.getArgument(0));
+
+        UnderstandingRating result = ratingService.submitRating(SESSION_ID, SKILL_ID, buildOwner(), 70);
+
+        assertEquals(70, result.getRating());
+        assertNotNull(result.getUpdatedAt());
+    }
+
+    @Test
+    public void getRatingsBySkill_sessionNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.getRatingsBySkill(SESSION_ID, SKILL_ID, buildOwner()));
+    }
+
+    @Test
+    public void getRatingsBySession_sessionNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.getRatingsBySession(SESSION_ID, buildOwner()));
+    }
 }

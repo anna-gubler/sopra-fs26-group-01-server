@@ -63,6 +63,94 @@ class DependencyServiceTest {
         dependency.setToSkill(toSkill);
     }
 
+    // getFromDependenciesBySkill
+
+    @Test
+    void getFromDependenciesBySkill_owner_returnsDeps() {
+        when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
+        when(dependencyRepository.findByFromSkill(fromSkill)).thenReturn(List.of(dependency));
+
+        List<Dependency> result = dependencyService.getFromDependenciesBySkill(100L, owner);
+
+        assertEquals(1, result.size());
+        assertEquals(dependency, result.get(0));
+    }
+
+    @Test
+    void getFromDependenciesBySkill_skillNotFound_throws404() {
+        when(skillRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getFromDependenciesBySkill(99L, owner));
+    }
+
+    @Test
+    void getFromDependenciesBySkill_notMember_throws403() {
+        when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
+        when(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).thenReturn(false);
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getFromDependenciesBySkill(100L, otherUser));
+    }
+
+    // getToDependenciesBySkill
+
+    @Test
+    void getToDependenciesBySkill_owner_returnsDeps() {
+        when(skillRepository.findById(200L)).thenReturn(Optional.of(toSkill));
+        when(dependencyRepository.findByToSkill(toSkill)).thenReturn(List.of(dependency));
+
+        List<Dependency> result = dependencyService.getToDependenciesBySkill(200L, owner);
+
+        assertEquals(1, result.size());
+        assertEquals(dependency, result.get(0));
+    }
+
+    @Test
+    void getToDependenciesBySkill_skillNotFound_throws404() {
+        when(skillRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getToDependenciesBySkill(99L, owner));
+    }
+
+    @Test
+    void getToDependenciesBySkill_notMember_throws403() {
+        when(skillRepository.findById(200L)).thenReturn(Optional.of(toSkill));
+        when(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).thenReturn(false);
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getToDependenciesBySkill(200L, otherUser));
+    }
+
+    // getById
+
+    @Test
+    void getById_owner_returnsDependency() {
+        when(dependencyRepository.findById(1000L)).thenReturn(Optional.of(dependency));
+
+        Dependency result = dependencyService.getById(1000L, owner);
+
+        assertEquals(dependency, result);
+    }
+
+    @Test
+    void getById_notFound_throws404() {
+        when(dependencyRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getById(99L, owner));
+    }
+
+    @Test
+    void getById_notMember_throws403() {
+        when(dependencyRepository.findById(1000L)).thenReturn(Optional.of(dependency));
+        when(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, otherUser.getId())).thenReturn(false);
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.getById(1000L, otherUser));
+    }
+
     // getDependenciesByMap
     @Test
     void getDependenciesByMap_validOwner_returnsList() {

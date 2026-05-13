@@ -135,6 +135,18 @@ class QuizQuestionServiceTest {
     // ─── 907 updateQuestion ───────────────────────────────────────────────────
 
     @Test
+    void updateQuestion_notOwner_throws403() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizQuestionService.updateQuestion(40L, new QuizQuestion(), student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void updateQuestion_validInput_returnsUpdatedQuestion() {
         given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
         given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
@@ -161,6 +173,18 @@ class QuizQuestionServiceTest {
     }
 
     // ─── 908 deleteQuestion ───────────────────────────────────────────────────
+
+    @Test
+    void deleteQuestion_notOwner_throws403() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizQuestionService.deleteQuestion(40L, student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
 
     @Test
     void deleteQuestion_owner_deletesSuccessfully() {

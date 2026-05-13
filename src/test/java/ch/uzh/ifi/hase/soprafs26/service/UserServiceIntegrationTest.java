@@ -50,7 +50,7 @@ public class UserServiceIntegrationTest {
 	}
 
 
-	// --- createUser ---
+	// createUser
 
 	@Test
 	public void createUser_validInputs_success() {
@@ -60,7 +60,7 @@ public class UserServiceIntegrationTest {
 		assertEquals(TEST_BIO, createdUser.getBio());
 		assertEquals(UserStatus.ONLINE, createdUser.getStatus());
 		assertEquals("bottts-neutral", createdUser.getStyle());
-		assertEquals(TEST_USERNAME, createdUser.getSeed());	
+		assertEquals(TEST_USERNAME, createdUser.getSeed());
 		assertNotNull(createdUser.getId());
 		assertNotNull(createdUser.getToken());
 		assertNotNull(createdUser.getCreationDate());
@@ -76,7 +76,7 @@ public class UserServiceIntegrationTest {
 	}
 
 
-	// --- loginUser ---
+	// loginUser
 
 	@Test
 	public void loginUser_validCredentials_success() {
@@ -89,8 +89,41 @@ public class UserServiceIntegrationTest {
 		assertNotNull(result.getToken());
 	}
 
+	@Test
+	public void loginUser_wrongPassword_throwsException() {
+		userService.createUser(buildNewUser());
 
-	// --- getUserById ---
+		User loginInput = new User();
+		loginInput.setUsername(TEST_USERNAME);
+		loginInput.setPassword("wrongPassword");
+
+		assertThrows(ResponseStatusException.class, () -> userService.loginUser(loginInput));
+	}
+
+	@Test
+	public void loginUser_unknownUsername_throwsException() {
+		User loginInput = new User();
+		loginInput.setUsername("nobody");
+		loginInput.setPassword(RAW_PASSWORD);
+
+		assertThrows(ResponseStatusException.class, () -> userService.loginUser(loginInput));
+	}
+
+
+	// logoutUser
+
+	@Test
+	public void logoutUser_setsStatusOfflineAndClearsToken() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		userService.logoutUser(createdUser);
+
+		assertNull(createdUser.getToken());
+		assertEquals(UserStatus.OFFLINE, createdUser.getStatus());
+	}
+
+
+	// getUserById
 
 	@Test
 	public void getUserById_userExists_returnsUser() {
@@ -103,7 +136,43 @@ public class UserServiceIntegrationTest {
 	}
 
 
-	// --- changeUserInformation ---
+	// getUserByToken
+
+	@Test
+	public void getUserByToken_validToken_returnsUser() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		User result = userService.getUserByToken(createdUser.getToken());
+
+		assertEquals(createdUser.getId(), result.getId());
+	}
+
+	@Test
+	public void getUserByToken_invalidToken_throwsException() {
+		assertThrows(ResponseStatusException.class,
+				() -> userService.getUserByToken("not-a-real-token"));
+	}
+
+
+	// getUserByUsername
+
+	@Test
+	public void getUserByUsername_userExists_returnsUser() {
+		userService.createUser(buildNewUser());
+
+		User result = userService.getUserByUsername(TEST_USERNAME);
+
+		assertEquals(TEST_USERNAME, result.getUsername());
+	}
+
+	@Test
+	public void getUserByUsername_notFound_throwsException() {
+		assertThrows(ResponseStatusException.class,
+				() -> userService.getUserByUsername("nobody"));
+	}
+
+
+	// changeUserInformation
 
 	@Test
 	public void changeUserInformation_validInputs_persistsChanges() {
@@ -120,7 +189,62 @@ public class UserServiceIntegrationTest {
 	}
 
 
-	// --- deleteUserProfile ---
+	// changeUserAvatar
+
+	@Test
+	public void changeUserAvatar_persistsStyleAndSeed() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		User input = new User();
+		input.setStyle("pixel-art");
+		input.setSeed("customSeed");
+
+		User updated = userService.changeUserAvatar(createdUser, input);
+
+		assertEquals("pixel-art", updated.getStyle());
+		assertEquals("customSeed", updated.getSeed());
+	}
+
+
+	// changePassword
+
+	@Test
+	public void changePassword_validInput_updatesPassword() {
+		User createdUser = userService.createUser(buildNewUser());
+		String oldHashedPassword = createdUser.getPassword();
+
+		userService.changePassword(createdUser, RAW_PASSWORD, "newPassword123", "newPassword123");
+
+		User updatedUser = userService.getUserById(createdUser.getId());
+		assertNotEquals(oldHashedPassword, updatedUser.getPassword());
+	}
+
+	@Test
+	public void changePassword_wrongOldPassword_throwsException() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(createdUser, "wrongOld", "new123", "new123"));
+	}
+
+	@Test
+	public void changePassword_newPasswordSameAsOld_throwsException() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(createdUser, RAW_PASSWORD, RAW_PASSWORD, RAW_PASSWORD));
+	}
+
+	@Test
+	public void changePassword_confirmMismatch_throwsException() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(createdUser, RAW_PASSWORD, "newPass1", "newPass2"));
+	}
+
+
+	// deleteUserProfile
 
 	@Test
 	public void deleteUserProfile_correctPassword_userDeletedFromDB() {
@@ -131,6 +255,14 @@ public class UserServiceIntegrationTest {
 
 		assertFalse(userRepository.findByUsername(TEST_USERNAME).isPresent());
 		assertFalse(userRepository.findById(id).isPresent());
+	}
+
+	@Test
+	public void deleteUserProfile_wrongPassword_throwsException() {
+		User createdUser = userService.createUser(buildNewUser());
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.deleteUserProfile(createdUser, "wrongPassword"));
 	}
 
 }

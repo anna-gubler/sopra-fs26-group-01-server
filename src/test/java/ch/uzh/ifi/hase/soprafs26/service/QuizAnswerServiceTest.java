@@ -69,6 +69,15 @@ class QuizAnswerServiceTest {
     // ─── 909 getAnswersByQuestionId ───────────────────────────────────────────
 
     @Test
+    void getAnswersByQuestionId_questionNotFound_throws404() {
+        given(quizQuestionRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.getAnswersByQuestionId(99L, owner));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
     void getAnswersByQuestionId_member_returnsAnswers() {
         given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
         given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
@@ -148,6 +157,19 @@ class QuizAnswerServiceTest {
     // ─── 911 updateAnswer ─────────────────────────────────────────────────────
 
     @Test
+    void updateAnswer_notOwner_throws403() {
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(answer));
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.updateAnswer(50L, new QuizAnswer(), student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void updateAnswer_validInput_returnsUpdatedAnswer() {
         given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(answer));
         given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
@@ -175,6 +197,19 @@ class QuizAnswerServiceTest {
     }
 
     // ─── 912 deleteAnswer ─────────────────────────────────────────────────────
+
+    @Test
+    void deleteAnswer_notOwner_throws403() {
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(answer));
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.deleteAnswer(50L, student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
 
     @Test
     void deleteAnswer_owner_deletesSuccessfully() {
