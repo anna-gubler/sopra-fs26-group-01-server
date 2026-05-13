@@ -28,6 +28,8 @@ public class Skill {
 
     private String difficulty;
 
+    private String notes;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_map_id", nullable = false)
     private SkillMap skillMap;
@@ -48,6 +50,7 @@ public class Skill {
     public Float getPositionX() { return positionX; }
     public String getResources() { return resources; }
     public String getDifficulty() { return difficulty; }
+    public String getNotes() { return notes; }
     public SkillMap getSkillMap() { return skillMap; }
     public Boolean getIsLocked() { return isLocked; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -61,6 +64,7 @@ public class Skill {
     public void setPositionX(Float positionX) { this.positionX = positionX; }
     public void setResources(String resources) { this.resources = resources; }
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
+    public void setNotes(String notes) { this.notes = notes; }
     public void setSkillMap(SkillMap skillMap) { this.skillMap = skillMap; }
     public void setIsLocked(Boolean isLocked) { this.isLocked = isLocked; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

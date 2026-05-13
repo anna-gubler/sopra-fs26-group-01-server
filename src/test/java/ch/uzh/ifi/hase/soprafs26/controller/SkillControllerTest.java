@@ -298,6 +298,56 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.name", is("Recursion")));
         }
 
+    // 302.5 - notes field is persisted on POST
+    @Test
+    void createSkill_withNotes_returnsCreatedWithNotes() throws Exception {
+        Skill created = buildSkill(4L, "Polymorphism", 2);
+        created.setNotes("See GoF chapter 1");
+
+        given(skillService.createSkill(
+                Mockito.eq(10L),
+                Mockito.any(Skill.class),
+                Mockito.any(User.class)))
+                .willReturn(created);
+
+        String body = """
+                { "name": "Polymorphism", "level": 2, "notes": "See GoF chapter 1" }
+                """;
+
+        mockMvc.perform(post("/skillmaps/10/skills")
+                        .header("Authorization", "Bearer valid-token")
+                        .header("token", "valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.notes", is("See GoF chapter 1")));
+    }
+
+    // 304.5 - notes field is updated on PATCH
+    @Test
+    void updateSkill_withNotes_returnsUpdatedNotes() throws Exception {
+        Skill updated = buildSkill(5L, "Recursion", 2);
+        updated.setNotes("Updated note");
+
+        given(skillService.updateSkill(
+                Mockito.eq(5L),
+                Mockito.any(Skill.class),
+                Mockito.any(User.class)))
+                .willReturn(updated);
+
+        String body = """
+                { "notes": "Updated note" }
+                """;
+
+        mockMvc.perform(patch("/skills/5")
+                        .header("Authorization", "Bearer valid-token")
+                        .header("token", "valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes", is("Updated note")));
+    }
+
         @Test
         void getSkillByIdAndMap_skillNotInMap_returns404() throws Exception {
         given(skillService.getSkillByIdAndMap(eq(10L), eq(5L), any(User.class)))
