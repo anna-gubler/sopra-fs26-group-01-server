@@ -7,6 +7,7 @@ public class SkillPostDTO {
     private String difficulty;
     private Integer level;
     private Float positionX;
+    private String notes;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -25,5 +26,8 @@ public class SkillPostDTO {
 
     public Float getPositionX() { return positionX; }
     public void setPositionX(Float positionX) { this.positionX = positionX; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
 }

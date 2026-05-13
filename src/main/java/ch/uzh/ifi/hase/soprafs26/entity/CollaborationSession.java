@@ -23,6 +23,9 @@ public class CollaborationSession {
     @Column(nullable = false)
     private boolean isActive;
 
+    @Column
+    private Long promptedQuizSkillId;
+
     // getters and setters
     public Long getId()                        { return id; }
     public Long getSkillMapId()                { return skillMapId; }
@@ -33,4 +36,6 @@ public class CollaborationSession {
     public void setEndedAt(LocalDateTime t)    { this.endedAt = t; }
     public boolean isActive()                  { return isActive; }
     public void setActive(boolean active)      { this.isActive = active; }
+    public Long getPromptedQuizSkillId()       { return promptedQuizSkillId; }
+    public void setPromptedQuizSkillId(Long prompted)       { this.promptedQuizSkillId = prompted; }
 }

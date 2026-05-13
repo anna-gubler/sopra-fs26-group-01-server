@@ -4,8 +4,11 @@ import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,6 +53,15 @@ public class CollaborationSessionServiceTest {
 
     @InjectMocks
     private CollaborationSessionService sessionService;
+
+    @Mock
+    private SkillRepository skillRepository;
+
+    @Mock
+    private QuizRepository quizRepository;
+
+    @Mock
+    private QuizAttemptRepository quizAttemptRepository;
 
     @BeforeEach
     public void setup() {
@@ -128,6 +141,37 @@ public class CollaborationSessionServiceTest {
                 () -> sessionService.startSession(SKILL_MAP_ID, buildOwner()));
     }
 
+    @Test
+    public void startSession_privateMap_throwsForbidden() {
+        SkillMap privateMap = buildSkillMap();
+        privateMap.setIsPublic(false);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(privateMap));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.startSession(SKILL_MAP_ID, buildOwner()));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    public void startSession_publicMap_proceedsNormally() {
+        SkillMap publicMap = buildSkillMap();
+        publicMap.setIsPublic(true);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(publicMap));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(buildActiveSession());
+
+        sessionService.startSession(SKILL_MAP_ID, buildOwner());
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository, Mockito.times(1)).save(captor.capture());
+        assertTrue(captor.getValue().isActive());
+        assertEquals(SKILL_MAP_ID, captor.getValue().getSkillMapId());
+        assertNotNull(captor.getValue().getStartedAt());
+
+        Mockito.verify(broadcastService, Mockito.times(1))
+                .broadcastSessionStarted(Mockito.eq(SKILL_MAP_ID), Mockito.anyLong(), Mockito.any());
+    }
+
     // --- endSession ---
 
     @Test
@@ -197,5 +241,56 @@ public class CollaborationSessionServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.getActiveSession(SKILL_MAP_ID, buildOwner()));
+    }
+
+    // --- setPromptedQuiz ---
+
+    @Test
+    public void setPromptedQuiz_validOwner_setsSkillId() {
+        CollaborationSession session = buildActiveSession();
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(session));
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(session);
+
+        sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L);
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertEquals(42L, captor.getValue().getPromptedQuizSkillId());
+    }
+
+    @Test
+    public void setPromptedQuiz_nullSkillId_clearsPrompt() {
+        CollaborationSession session = buildActiveSession();
+        session.setPromptedQuizSkillId(42L);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(session));
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(session);
+
+        sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), null);
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertNull(captor.getValue().getPromptedQuizSkillId());
+    }
+
+    @Test
+    public void setPromptedQuiz_notOwner_throwsForbidden() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOtherUser(), 42L));
+    }
+
+    @Test
+    public void setPromptedQuiz_noActiveSession_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L));
     }
 }

@@ -73,7 +73,7 @@ class SkillMapServiceIntegrationTest {
 
         SkillMap mapInput = new SkillMap();
         mapInput.setTitle("Test Map");
-        mapInput.setIsPublic(false);
+        mapInput.setIsPublic(true);
         mapInput.setNumberOfLevels(3);
         skillMap = skillMapService.createSkillMap(mapInput, owner);
     }
@@ -136,7 +136,7 @@ class SkillMapServiceIntegrationTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap("WRONGCODE1", student));
 
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
@@ -299,8 +299,14 @@ class SkillMapServiceIntegrationTest {
 
     @Test
     void exportSkillMap_nonMember_throws403() {
+        SkillMap privateMap = new SkillMap();
+        privateMap.setTitle("Private Map");
+        privateMap.setIsPublic(false);
+        privateMap.setNumberOfLevels(2);
+        SkillMap saved = skillMapService.createSkillMap(privateMap, owner);
+
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> skillMapService.exportSkillMap(skillMap.getId(), student));
+                () -> skillMapService.exportSkillMap(saved.getId(), student));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 

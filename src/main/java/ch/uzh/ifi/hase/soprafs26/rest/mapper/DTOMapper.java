@@ -4,11 +4,24 @@ import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
+import ch.uzh.ifi.hase.soprafs26.entity.StudentProgress;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.StudentProgressDTO;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizAnswer;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizAttempt;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAnswerGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAnswerPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAttemptGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizQuestionGetDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizQuestionPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapMembershipGetDTO;
@@ -134,4 +147,30 @@ public interface DTOMapper {
     @Mapping(source = "fromSkill.id", target = "fromSkillId")
     @Mapping(source = "toSkill.id", target = "toSkillId")
     DependencyGetDTO convertDependencyEntityToGetDTO(Dependency dependency);
+
+    // Quiz
+    @Mapping(source = "id", target = "id")
+    QuizGetDTO convertQuizEntityToQuizGetDTO(Quiz quiz);
+
+    Quiz convertQuizPostDTOToQuizEntity(QuizPostDTO quizPostDTO);
+
+    // QuizQuestion
+    @Mapping(source = "id", target = "id")
+    QuizQuestionGetDTO convertQuizQuestionEntityToQuizQuestionGetDTO(QuizQuestion quizQuestion);
+
+    QuizQuestion convertQuizQuestionPostDTOToQuizQuestionEntity(QuizQuestionPostDTO quizQuestionPostDTO);
+
+    // QuizAnswer
+    @Mapping(source = "id", target = "id")
+    QuizAnswerGetDTO convertQuizAnswerEntityToQuizAnswerGetDTO(QuizAnswer quizAnswer);
+
+    QuizAnswer convertQuizAnswerPostDTOToQuizAnswerEntity(QuizAnswerPostDTO quizAnswerPostDTO);
+
+    // QuizAttempt
+    @Mapping(source = "id", target = "id")
+    QuizAttemptGetDTO convertQuizAttemptEntityToQuizAttemptGetDTO(QuizAttempt quizAttempt);
+
+    // StudentProgress
+    StudentProgressDTO convertStudentProgressToDTO(StudentProgress studentProgress);
+
 }
