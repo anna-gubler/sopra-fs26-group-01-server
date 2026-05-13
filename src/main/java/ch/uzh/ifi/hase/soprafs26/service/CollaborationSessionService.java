@@ -57,6 +57,10 @@ public class CollaborationSessionService {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
 
+        if (Boolean.FALSE.equals(skillMap.getIsPublic())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot start a session on a private skill map.");
+        }
+
         if (!skillMap.getOwnerId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can start a session");
         }

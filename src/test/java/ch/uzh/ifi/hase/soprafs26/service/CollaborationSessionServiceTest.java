@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -138,6 +139,37 @@ public class CollaborationSessionServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.startSession(SKILL_MAP_ID, buildOwner()));
+    }
+
+    @Test
+    public void startSession_privateMap_throwsForbidden() {
+        SkillMap privateMap = buildSkillMap();
+        privateMap.setIsPublic(false);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(privateMap));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.startSession(SKILL_MAP_ID, buildOwner()));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    public void startSession_publicMap_proceedsNormally() {
+        SkillMap publicMap = buildSkillMap();
+        publicMap.setIsPublic(true);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(publicMap));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(buildActiveSession());
+
+        sessionService.startSession(SKILL_MAP_ID, buildOwner());
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository, Mockito.times(1)).save(captor.capture());
+        assertTrue(captor.getValue().isActive());
+        assertEquals(SKILL_MAP_ID, captor.getValue().getSkillMapId());
+        assertNotNull(captor.getValue().getStartedAt());
+
+        Mockito.verify(broadcastService, Mockito.times(1))
+                .broadcastSessionStarted(Mockito.eq(SKILL_MAP_ID), Mockito.anyLong(), Mockito.any());
     }
 
     // --- endSession ---
