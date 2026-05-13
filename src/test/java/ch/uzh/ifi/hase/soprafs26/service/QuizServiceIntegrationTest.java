@@ -64,7 +64,6 @@ class QuizServiceIntegrationTest {
         mapInput.setTitle("Quiz Test Map");
         mapInput.setIsPublic(false);
         mapInput.setNumberOfLevels(3);
-        SkillMapService skillMapService = null; // injected below
         skillMap = new SkillMap();
         skillMap.setTitle("Quiz Test Map");
         skillMap.setIsPublic(true);
