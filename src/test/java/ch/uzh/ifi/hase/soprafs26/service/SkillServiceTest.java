@@ -312,4 +312,34 @@ class SkillServiceTest {
                 () -> skillService.updateSkill(99L, new Skill(), owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
+
+    @Test
+    void updateSkill_notes_persistsCorrectly() {
+        skill.setNotes(null);
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setNotes("Study chapter 3");
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals("Study chapter 3", result.getNotes());
+        verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void updateSkill_nullNotes_doesNotOverwriteExistingNotes() {
+        skill.setNotes("Existing note");
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setName("Updated Name");
+        // notes is not set → remains null → should not overwrite
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals("Existing note", result.getNotes());
+    }
 }

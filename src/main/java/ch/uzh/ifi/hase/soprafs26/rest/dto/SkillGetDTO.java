@@ -10,6 +10,7 @@ public class SkillGetDTO {
     private Float positionX;
     private Boolean isLocked;
     private Long skillMapId;
+    private String notes;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -37,4 +38,7 @@ public class SkillGetDTO {
 
     public Long getSkillMapId() { return skillMapId; }
     public void setSkillMapId(Long skillMapId) { this.skillMapId = skillMapId; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }
