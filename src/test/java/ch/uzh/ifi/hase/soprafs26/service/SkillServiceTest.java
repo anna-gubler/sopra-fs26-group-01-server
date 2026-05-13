@@ -336,10 +336,30 @@ class SkillServiceTest {
 
         Skill updates = new Skill();
         updates.setName("Updated Name");
-        // notes is not set → remains null → should not overwrite
 
         Skill result = skillService.updateSkill(5L, updates, owner);
 
         assertEquals("Existing note", result.getNotes());
+    }
+
+    // getSkillByIdAndMap
+
+    @Test
+    void getSkillByIdAndMap_skillBelongsToMap_returnsSkill() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+
+        Skill result = skillService.getSkillByIdAndMap(10L, 5L, owner);
+
+        assertEquals(skill.getId(), result.getId());
+        assertEquals("Recursion", result.getName());
+    }
+
+    @Test
+    void getSkillByIdAndMap_skillNotInMap_throws404() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillService.getSkillByIdAndMap(99L, 5L, owner));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 }

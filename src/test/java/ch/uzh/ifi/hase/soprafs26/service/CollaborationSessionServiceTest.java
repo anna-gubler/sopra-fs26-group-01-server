@@ -22,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -292,5 +293,55 @@ public class CollaborationSessionServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L));
+    }
+
+    // getSessionById
+
+    @Test
+    public void getSessionById_sessionExists_returnsSession() {
+        CollaborationSession session = buildActiveSession();
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+
+        CollaborationSession result = sessionService.getSessionById(SESSION_ID);
+
+        assertEquals(SESSION_ID, result.getId());
+        assertEquals(SKILL_MAP_ID, result.getSkillMapId());
+    }
+
+    @Test
+    public void getSessionById_notFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> sessionService.getSessionById(SESSION_ID));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // endSession additional cases
+
+    @Test
+    public void endSession_skillMapNotFound_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> sessionService.endSession(SKILL_MAP_ID, buildOwner()));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // getQuizResults
+
+    @Test
+    public void getQuizResults_noSkillsForMap_returnsEmpty() {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(skillRepository.findBySkillMap(Mockito.any())).thenReturn(List.of());
+
+        var result = sessionService.getQuizResults(SKILL_MAP_ID, buildOwner());
+
+        assertTrue(result.isEmpty());
     }
 }

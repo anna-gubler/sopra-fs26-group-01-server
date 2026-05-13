@@ -247,11 +247,48 @@ class QuizAttemptServiceTest {
 
     @Test
     void submitAttempt_notOwnAttempt_throws403() {
-        attempt.setUserId(owner.getId()); // gehört dem owner, nicht dem student
+        attempt.setUserId(owner.getId());
         given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> quizAttemptService.submitAttempt(60L, List.of(), student));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    //1003 getAttemptById
+
+    @Test
+    void getAttemptById_validRequest_returnsAttempt() {
+        attempt.setUserId(student.getId());
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        QuizAttempt result = quizAttemptService.getAttemptById(60L, student);
+
+        assertEquals(attempt.getId(), result.getId());
+    }
+
+    @Test
+    void getAttemptById_notFound_throws404() {
+        given(quizAttemptRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.getAttemptById(99L, student));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void getAttemptById_notOwnAttempt_throws403() {
+        attempt.setUserId(owner.getId());
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.getAttemptById(60L, student));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }

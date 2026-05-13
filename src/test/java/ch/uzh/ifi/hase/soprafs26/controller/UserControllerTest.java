@@ -7,6 +7,7 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPatchDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPasswordChangeDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutAvatarDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
@@ -435,5 +436,44 @@ public class UserControllerTest {
 
 		mockMvc.perform(putRequest)
 				.andExpect(status().isOk());
+	}
+
+	@Test
+	public void givenValidAuthentication_whenChangePassword_thenReturnNoContent() throws Exception {
+		mockAuthentication(newUser(), true);
+
+		UserPasswordChangeDTO dto = new UserPasswordChangeDTO();
+		dto.setOldPassword(PASSWORD);
+		dto.setNewPassword("NewPassword123!");
+		dto.setConfirmPassword("NewPassword123!");
+
+		MockHttpServletRequestBuilder patchRequest = patch("/users/me/password")
+				.header("Authorization", "Bearer " + TOKEN)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(dto));
+
+		mockMvc.perform(patchRequest)
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	public void givenWrongOldPassword_whenChangePassword_thenReturnUnauthorized() throws Exception {
+		mockAuthentication(newUser(), true);
+
+		willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Old password is incorrect"))
+				.given(userService).changePassword(any(User.class), any(), any(), any());
+
+		UserPasswordChangeDTO dto = new UserPasswordChangeDTO();
+		dto.setOldPassword("wrongOld");
+		dto.setNewPassword("NewPassword123!");
+		dto.setConfirmPassword("NewPassword123!");
+
+		MockHttpServletRequestBuilder patchRequest = patch("/users/me/password")
+				.header("Authorization", "Bearer " + TOKEN)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(asJsonString(dto));
+
+		mockMvc.perform(patchRequest)
+				.andExpect(status().isUnauthorized());
 	}
 }

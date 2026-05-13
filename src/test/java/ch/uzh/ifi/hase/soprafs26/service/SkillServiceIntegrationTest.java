@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @SpringBootTest
@@ -118,5 +119,51 @@ class SkillServiceIntegrationTest {
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         assertEquals(0, skillRepository.findBySkillMap(skillMap).size());
+    }
+
+    @Test
+    void getSkillsByMap_owner_returnsAllSkills() {
+        Skill s1 = new Skill();
+        s1.setName("Variables");
+        s1.setLevel(1);
+        skillService.createSkill(skillMap.getId(), s1, owner);
+
+        Skill s2 = new Skill();
+        s2.setName("Loops");
+        s2.setLevel(2);
+        skillService.createSkill(skillMap.getId(), s2, owner);
+
+        List<Skill> result = skillService.getSkillsByMap(skillMap.getId(), owner);
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void getSkillById_owner_returnsSkill() {
+        Skill input = new Skill();
+        input.setName("Functions");
+        input.setLevel(1);
+        Skill saved = skillService.createSkill(skillMap.getId(), input, owner);
+
+        Skill result = skillService.getSkillById(saved.getId(), owner);
+
+        assertNotNull(result);
+        assertEquals("Functions", result.getName());
+    }
+
+    @Test
+    void updateSkill_name_persistedCorrectly() {
+        Skill input = new Skill();
+        input.setName("OldName");
+        input.setLevel(1);
+        Skill saved = skillService.createSkill(skillMap.getId(), input, owner);
+
+        Skill updates = new Skill();
+        updates.setName("NewName");
+
+        Skill result = skillService.updateSkill(saved.getId(), updates, owner);
+
+        assertEquals("NewName", result.getName());
+        assertEquals("NewName", skillRepository.findById(saved.getId()).get().getName());
     }
 }

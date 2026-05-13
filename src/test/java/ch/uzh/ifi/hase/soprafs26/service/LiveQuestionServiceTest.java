@@ -72,6 +72,8 @@ class LiveQuestionServiceTest {
         dummyMap.setOwnerId(99L);
     }
 
+    // getQuestionsBySession
+
     @Test
     void getQuestionsBySession_returnsListFromRepository() {
         given(liveQuestionRepository.findBySessionId(1L)).willReturn(List.of(dummyQuestion));
@@ -81,6 +83,15 @@ class LiveQuestionServiceTest {
         assertEquals(1, result.size());
         assertEquals("What is polymorphism?", result.get(0).getText());
     }
+
+    @Test
+    void getQuestionsBySession_noQuestions_returnsEmptyList() {
+        given(liveQuestionRepository.findBySessionId(99L)).willReturn(List.of());
+
+        assertTrue(liveQuestionService.getQuestionsBySession(99L).isEmpty());
+    }
+
+    // postQuestion
 
     @Test
     void postQuestion_savesAndReturnsQuestion() {
@@ -93,6 +104,18 @@ class LiveQuestionServiceTest {
         assertEquals(0, result.getUpvoteCount());
         assertFalse(result.getIsAddressed());
     }
+
+    @Test
+    void postQuestion_nullSkillId_stillSaves() {
+        given(liveQuestionRepository.save(any())).willReturn(dummyQuestion);
+
+        LiveQuestion result = liveQuestionService.postQuestion(1L, null, null, "General question?");
+
+        assertNotNull(result);
+        verify(liveQuestionRepository).save(any());
+    }
+
+    // deleteQuestion
 
     @Test
     void deleteQuestion_questionExists_deletesSuccessfully() {
@@ -112,6 +135,17 @@ class LiveQuestionServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
+
+    // deleteAllQuestionsForSession
+
+    @Test
+    void deleteAllQuestionsForSession_delegatesToRepository() {
+        liveQuestionService.deleteAllQuestionsForSession(1L);
+
+        verify(liveQuestionRepository).deleteBySessionId(1L);
+    }
+
+    // upvoteQuestion
 
     @Test
     void upvoteQuestion_newUpvote_incrementsCount() {
@@ -138,6 +172,18 @@ class LiveQuestionServiceTest {
     }
 
     @Test
+    void upvoteQuestion_questionNotFound_throwsNotFound() {
+        given(liveQuestionRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.upvoteQuestion(99L, 1L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // removeUpvote
+
+    @Test
     void removeUpvote_existingUpvote_decrementsCount() {
         dummyQuestion.setUpvoteCount(1);
         UpvoteRecord record = new UpvoteRecord();
@@ -149,6 +195,41 @@ class LiveQuestionServiceTest {
         verify(upvoteRecordRepository).delete(record);
         assertEquals(0, dummyQuestion.getUpvoteCount());
     }
+
+    @Test
+    void removeUpvote_countAlreadyZero_staysZero() {
+        dummyQuestion.setUpvoteCount(0);
+        UpvoteRecord record = new UpvoteRecord();
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(upvoteRecordRepository.findByQuestionIdAndUserId(10L, 1L)).willReturn(Optional.of(record));
+
+        liveQuestionService.removeUpvote(10L, 1L);
+
+        assertEquals(0, dummyQuestion.getUpvoteCount());
+    }
+
+    @Test
+    void removeUpvote_questionNotFound_throwsNotFound() {
+        given(liveQuestionRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.removeUpvote(99L, 1L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void removeUpvote_noExistingRecord_throwsNotFound() {
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(upvoteRecordRepository.findByQuestionIdAndUserId(10L, 1L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.removeUpvote(10L, 1L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // markAddressed
 
     @Test
     void markAddressed_byOwner_setsAddressedTrue() {
@@ -172,5 +253,38 @@ class LiveQuestionServiceTest {
                 () -> liveQuestionService.markAddressed(10L, 42L));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
+    void markAddressed_questionNotFound_throwsNotFound() {
+        given(liveQuestionRepository.findById(99L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.markAddressed(99L, 99L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void markAddressed_sessionNotFound_throwsNotFound() {
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(collaborationSessionRepository.findById(1L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.markAddressed(10L, 99L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void markAddressed_skillMapNotFound_throwsNotFound() {
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(collaborationSessionRepository.findById(1L)).willReturn(Optional.of(dummySession));
+        given(skillMapRepository.findById(5L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> liveQuestionService.markAddressed(10L, 99L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 }

@@ -257,7 +257,7 @@ class SkillMapServiceIntegrationTest {
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
-}
+
     // exportSkillMap
     @Test
     void exportSkillMap_withSkillsAndDependencies_returnsCorrectStructure() {
