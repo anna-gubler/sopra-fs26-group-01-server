@@ -2,6 +2,9 @@ package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.constant.SkillMapRole;
 import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
+import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizAnswer;
+import ch.uzh.ifi.hase.soprafs26.entity.QuizQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
@@ -14,6 +17,9 @@ import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAnswerExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizQuestionExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
 
@@ -578,4 +584,99 @@ class SkillMapServiceTest {
                 () -> skillMapService.importSkillMap(dto, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
+
+        @Test
+        void exportSkillMap_skillWithQuiz_includesQuizInExport() {
+        Skill skill = new Skill();
+        skill.setId(1L);
+        skill.setName("Variables");
+        skill.setLevel(1);
+
+        Quiz quiz = new Quiz();
+        quiz.setId(10L);
+        quiz.setSkillId(1L);
+        quiz.setIsActive(true);
+        quiz.setPassMark(70);
+
+        QuizQuestion question = new QuizQuestion();
+        question.setId(100L);
+        question.setQuizId(10L);
+        question.setQuizQuestionText("What is a variable?");
+        question.setOrderIndex(1);
+
+        QuizAnswer answer = new QuizAnswer();
+        answer.setId(1000L);
+        answer.setQuizQuestionId(100L);
+        answer.setAnswerText("A container for data");
+        answer.setIsCorrect(true);
+
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill));
+        given(dependencyRepository.findByFromSkill_IdIn(List.of(1L))).willReturn(List.of());
+        given(quizRepository.findBySkillId(1L)).willReturn(Optional.of(quiz));
+        given(quizQuestionRepository.findByQuizId(10L)).willReturn(List.of(question));
+        given(quizAnswerRepository.findByQuizQuestionId(100L)).willReturn(List.of(answer));
+
+        SkillMapExportDTO result = skillMapService.exportSkillMap(10L, owner);
+
+        assertEquals(1, result.getSkills().size());
+        assertNotNull(result.getSkills().get(0).getQuiz());
+        assertEquals(70, result.getSkills().get(0).getQuiz().getPassMark());
+        assertEquals(1, result.getSkills().get(0).getQuiz().getQuestions().size());
+        assertEquals("What is a variable?", result.getSkills().get(0).getQuiz().getQuestions().get(0).getQuizQuestionText());
+        assertEquals(1, result.getSkills().get(0).getQuiz().getQuestions().get(0).getAnswers().size());
+        }
+
+        @Test
+        void importSkillMap_skillWithQuiz_createsQuizWithQuestionsAndAnswers() {
+                QuizAnswerExportDTO answerDTO = new QuizAnswerExportDTO();
+                answerDTO.setAnswerText("A container for data");
+                answerDTO.setIsCorrect(true);
+
+                QuizQuestionExportDTO questionDTO = new QuizQuestionExportDTO();
+                questionDTO.setQuizQuestionText("What is a variable?");
+                questionDTO.setOrderIndex(1);
+                questionDTO.setAnswers(List.of(answerDTO));
+
+                QuizExportDTO quizDTO = new QuizExportDTO();
+                quizDTO.setIsActive(true);
+                quizDTO.setPassMark(70);
+                quizDTO.setQuestions(List.of(questionDTO));
+
+                SkillExportDTO skillDTO = new SkillExportDTO();
+                skillDTO.setExportId("skill-1");
+                skillDTO.setName("Variables");
+                skillDTO.setLevel(1);
+                skillDTO.setIsLocked(false);
+                skillDTO.setQuiz(quizDTO);
+
+                SkillMapExportDTO importDTO = new SkillMapExportDTO();
+                importDTO.setTitle("Imported Map");
+                importDTO.setNumberOfLevels(1);
+                importDTO.setIsPublic(false);
+                importDTO.setSkills(List.of(skillDTO));
+                importDTO.setDependencies(List.of());
+
+                given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+                given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
+
+                Skill savedSkill = new Skill();
+                savedSkill.setId(1L);
+                given(skillRepository.save(any(Skill.class))).willReturn(savedSkill);
+
+                Quiz savedQuiz = new Quiz();
+                savedQuiz.setId(10L);
+                given(quizRepository.save(any(Quiz.class))).willReturn(savedQuiz);
+
+                QuizQuestion savedQuestion = new QuizQuestion();
+                savedQuestion.setId(100L);
+                given(quizQuestionRepository.save(any(QuizQuestion.class))).willReturn(savedQuestion);
+
+                skillMapService.importSkillMap(importDTO, owner);
+
+                verify(quizRepository, times(1)).save(any(Quiz.class));
+                verify(quizQuestionRepository, times(1)).save(any(QuizQuestion.class));
+                verify(quizAnswerRepository, times(1)).save(any(QuizAnswer.class));
+        }
 }
