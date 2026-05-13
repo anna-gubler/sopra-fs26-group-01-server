@@ -215,7 +215,8 @@ public class UserServiceIntegrationTest {
 
 		userService.changePassword(createdUser, RAW_PASSWORD, "newPassword123", "newPassword123");
 
-		assertNotEquals(oldHashedPassword, createdUser.getPassword());
+		User updatedUser = userService.getUserById(createdUser.getId());
+		assertNotEquals(oldHashedPassword, updatedUser.getPassword());
 	}
 
 	@Test

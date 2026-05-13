@@ -200,8 +200,14 @@ class SkillMapServiceIntegrationTest {
     // private map access control
     @Test
     void getSkillMapById_privateMap_nonMember_throwsForbidden() {
+        SkillMap privateMapInput = new SkillMap();
+        privateMapInput.setTitle("Private Map");
+        privateMapInput.setIsPublic(false);
+        privateMapInput.setNumberOfLevels(2);
+        SkillMap privateMap = skillMapService.createSkillMap(privateMapInput, owner);
+
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                skillMapService.getSkillMapById(skillMap.getId(), student));
+                skillMapService.getSkillMapById(privateMap.getId(), student));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }

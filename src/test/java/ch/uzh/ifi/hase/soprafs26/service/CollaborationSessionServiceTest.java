@@ -1,9 +1,12 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
+import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
+import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
@@ -343,5 +346,52 @@ public class CollaborationSessionServiceTest {
         var result = sessionService.getQuizResults(SKILL_MAP_ID, buildOwner());
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void getQuizResults_skillsWithNoQuiz_returnsEmpty() {
+        Skill skill = new Skill();
+        skill.setId(5L);
+
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(skillRepository.findBySkillMap(Mockito.any())).thenReturn(List.of(skill));
+        Mockito.when(quizRepository.findBySkillId(5L)).thenReturn(Optional.empty());
+
+        var result = sessionService.getQuizResults(SKILL_MAP_ID, buildOwner());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void getQuizResults_withQuizAttempts_returnsSummaries() {
+        Skill skill = new Skill();
+        skill.setId(5L);
+
+        Quiz quiz = new Quiz();
+        quiz.setId(50L);
+        quiz.setSkillId(5L);
+
+        List<Object[]> rows = List.<Object[]>of(new Object[]{50L, 3L, 75.0});
+
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(skillRepository.findBySkillMap(Mockito.any())).thenReturn(List.of(skill));
+        Mockito.when(quizRepository.findBySkillId(5L)).thenReturn(Optional.of(quiz));
+        Mockito.when(quizAttemptRepository.aggregateByQuizIdsAndStartedAt(
+                Mockito.eq(List.of(50L)), Mockito.any())).thenReturn(rows);
+        Mockito.when(quizRepository.findById(50L)).thenReturn(Optional.of(quiz));
+
+        List<DashboardQuizSummaryDTO> result = sessionService.getQuizResults(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(1, result.size());
+        assertEquals(50L, result.get(0).getQuizId());
+        assertEquals(5L, result.get(0).getSkillId());
+        assertEquals(3, result.get(0).getTotalAttempts());
+        assertEquals(75.0, result.get(0).getAverageScore());
     }
 }
