@@ -175,7 +175,7 @@ public class SkillMapService {
         }
 
         SkillMap map = skillMapRepository.findByInviteCode(inviteCode)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invite code is invalid."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite code is invalid."));
 
         if (!Boolean.TRUE.equals(map.getIsPublic())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This skillmap is not public.");
