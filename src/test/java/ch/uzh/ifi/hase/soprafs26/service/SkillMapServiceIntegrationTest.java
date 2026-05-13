@@ -136,7 +136,7 @@ class SkillMapServiceIntegrationTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 skillMapService.joinSkillMap("WRONGCODE1", student));
 
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
