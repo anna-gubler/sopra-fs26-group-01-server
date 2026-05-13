@@ -5,6 +5,8 @@ import org.mapstruct.factory.Mappers;
 
 import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
 import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
+import ch.uzh.ifi.hase.soprafs26.entity.StudentProgress;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.StudentProgressDTO;
 import ch.uzh.ifi.hase.soprafs26.entity.QuizAnswer;
 import ch.uzh.ifi.hase.soprafs26.entity.QuizAttempt;
 import ch.uzh.ifi.hase.soprafs26.entity.QuizQuestion;
@@ -167,5 +169,8 @@ public interface DTOMapper {
     // QuizAttempt
     @Mapping(source = "id", target = "id")
     QuizAttemptGetDTO convertQuizAttemptEntityToQuizAttemptGetDTO(QuizAttempt quizAttempt);
+
+    // StudentProgress
+    StudentProgressDTO convertStudentProgressToDTO(StudentProgress studentProgress);
 
 }
