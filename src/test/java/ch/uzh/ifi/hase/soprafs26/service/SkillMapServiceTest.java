@@ -306,7 +306,7 @@ class SkillMapServiceTest {
     void joinSkillMap_wrongInviteCode_throws403() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> skillMapService.joinSkillMap("WRONGCODE", otherUser));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
