@@ -152,6 +152,23 @@ class QuizServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
+    @Test
+    void createQuiz_nullPassMark_succeeds() {
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(quizRepository.findBySkillId(20L)).willReturn(Optional.empty());
+        given(quizRepository.save(any(Quiz.class))).willReturn(quiz);
+
+        Quiz input = new Quiz();
+        input.setIsActive(true);
+        input.setPassMark(null);
+
+        Quiz result = quizService.createQuiz(20L, input, owner);
+
+        assertNotNull(result);
+        verify(quizRepository).save(any(Quiz.class));
+    }
+
     // ─── 903 updateQuiz ───────────────────────────────────────────────────────
 
     @Test
@@ -202,6 +219,36 @@ class QuizServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> quizService.updateQuiz(30L, updates, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void updateQuiz_cooldownHours_updatesCorrectly() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(quizRepository.save(any(Quiz.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Quiz updates = new Quiz();
+        updates.setCooldownHours(48);
+
+        Quiz result = quizService.updateQuiz(30L, updates, owner);
+
+        assertEquals(48, result.getCooldownHours());
+    }
+
+    @Test
+    void updateQuiz_validPassMark_updatesCorrectly() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(quizRepository.save(any(Quiz.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Quiz updates = new Quiz();
+        updates.setPassMark(80);
+
+        Quiz result = quizService.updateQuiz(30L, updates, owner);
+
+        assertEquals(80, result.getPassMark());
     }
 
     // ─── 904 deleteQuiz ───────────────────────────────────────────────────────

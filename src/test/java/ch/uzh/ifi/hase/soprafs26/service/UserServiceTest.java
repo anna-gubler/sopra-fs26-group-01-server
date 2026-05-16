@@ -338,6 +338,42 @@ public class UserServiceTest {
 	}
 
 
+	@Test
+	public void changeUserAvatar_styleOnly_doesNotChangeSeed() {
+		User requestingUser = buildPersistedUser();
+		requestingUser.setStyle("bottts-neutral");
+		requestingUser.setSeed("originalSeed");
+
+		User input = new User();
+		input.setStyle("pixel-art");
+		input.setSeed(null);
+
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+		User result = userService.changeUserAvatar(requestingUser, input);
+
+		assertEquals("pixel-art", result.getStyle());
+		assertEquals("originalSeed", result.getSeed());
+	}
+
+	@Test
+	public void changeUserAvatar_seedOnly_doesNotChangeStyle() {
+		User requestingUser = buildPersistedUser();
+		requestingUser.setStyle("bottts-neutral");
+		requestingUser.setSeed("originalSeed");
+
+		User input = new User();
+		input.setStyle(null);
+		input.setSeed("newSeed");
+
+		Mockito.when(userRepository.saveAndFlush(Mockito.any())).thenAnswer(inv -> inv.getArgument(0));
+
+		User result = userService.changeUserAvatar(requestingUser, input);
+
+		assertEquals("bottts-neutral", result.getStyle());
+		assertEquals("newSeed", result.getSeed());
+	}
+
 	// changePassword
 
 	@Test

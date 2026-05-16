@@ -270,6 +270,22 @@ class SkillMapServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
+    @Test
+    void updateSkillMap_description_updatesCorrectly() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId()))
+                .willReturn(true);
+        given(skillMapRepository.save(any(SkillMap.class))).willAnswer(inv -> inv.getArgument(0));
+
+        SkillMap updates = new SkillMap();
+        updates.setDescription("New description");
+
+        SkillMap result = skillMapService.updateSkillMap(10L, updates, owner);
+
+        assertEquals("New description", result.getDescription());
+        verify(skillMapRepository).save(skillMap);
+    }
+
     // ─── 205  deleteSkillMap ──────────────────────────────────────────────────
 
     @Test
@@ -550,6 +566,48 @@ class SkillMapServiceTest {
         assertNotNull(result);
         verify(skillRepository, times(2)).save(any(Skill.class));
         verify(dependencyRepository, times(1)).save(any(Dependency.class));
+    }
+
+    @Test
+    void importSkillMap_nullNumberOfLevels_defaultsToOne() {
+        SkillMapExportDTO dto = new SkillMapExportDTO();
+        dto.setTitle("Test");
+        dto.setNumberOfLevels(null);
+        dto.setIsPublic(false);
+        dto.setSkills(List.of());
+        dto.setDependencies(List.of());
+
+        given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+        given(skillMapRepository.save(any(SkillMap.class))).willAnswer(inv -> {
+            SkillMap m = inv.getArgument(0);
+            m.setId(10L);
+            return m;
+        });
+
+        SkillMap result = skillMapService.importSkillMap(dto, owner);
+
+        assertEquals(1, result.getNumberOfLevels());
+    }
+
+    @Test
+    void importSkillMap_nullIsPublic_defaultsToFalse() {
+        SkillMapExportDTO dto = new SkillMapExportDTO();
+        dto.setTitle("Test");
+        dto.setNumberOfLevels(3);
+        dto.setIsPublic(null);
+        dto.setSkills(List.of());
+        dto.setDependencies(List.of());
+
+        given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+        given(skillMapRepository.save(any(SkillMap.class))).willAnswer(inv -> {
+            SkillMap m = inv.getArgument(0);
+            m.setId(10L);
+            return m;
+        });
+
+        SkillMap result = skillMapService.importSkillMap(dto, owner);
+
+        assertFalse(result.getIsPublic());
     }
 
     @Test

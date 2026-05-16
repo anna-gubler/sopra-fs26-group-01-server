@@ -154,6 +154,40 @@ class QuizAnswerServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
+    @Test
+    void createAnswer_nullAnswerText_throws400() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        QuizAnswer input = new QuizAnswer();
+        input.setAnswerText(null);
+        input.setIsCorrect(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.createAnswer(40L, input, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(quizAnswerRepository, never()).save(any());
+    }
+
+    @Test
+    void createAnswer_blankAnswerText_throws400() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        QuizAnswer input = new QuizAnswer();
+        input.setAnswerText("   ");
+        input.setIsCorrect(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.createAnswer(40L, input, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(quizAnswerRepository, never()).save(any());
+    }
+
     // ─── 911 updateAnswer ─────────────────────────────────────────────────────
 
     @Test
@@ -194,6 +228,42 @@ class QuizAnswerServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> quizAnswerService.updateAnswer(99L, new QuizAnswer(), owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void updateAnswer_isCorrect_updatesCorrectly() {
+        answer.setIsCorrect(true);
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(answer));
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(quizAnswerRepository.save(any(QuizAnswer.class))).willAnswer(inv -> inv.getArgument(0));
+
+        QuizAnswer updates = new QuizAnswer();
+        updates.setIsCorrect(false);
+
+        QuizAnswer result = quizAnswerService.updateAnswer(50L, updates, owner);
+
+        assertFalse(result.getIsCorrect());
+        verify(quizAnswerRepository).save(any(QuizAnswer.class));
+    }
+
+    @Test
+    void updateAnswer_blankAnswerText_throws400() {
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(answer));
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        QuizAnswer updates = new QuizAnswer();
+        updates.setAnswerText("   ");
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAnswerService.updateAnswer(50L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(quizAnswerRepository, never()).save(any());
     }
 
     // ─── 912 deleteAnswer ─────────────────────────────────────────────────────

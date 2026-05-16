@@ -132,6 +132,21 @@ class QuizQuestionServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
+    @Test
+    void createQuestion_nullText_throws400() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        QuizQuestion input = new QuizQuestion();
+        input.setQuizQuestionText(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizQuestionService.createQuestion(30L, input, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(quizQuestionRepository, never()).save(any());
+    }
+
     // ─── 907 updateQuestion ───────────────────────────────────────────────────
 
     @Test
@@ -170,6 +185,39 @@ class QuizQuestionServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> quizQuestionService.updateQuestion(99L, new QuizQuestion(), owner));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void updateQuestion_blankText_throws400() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        QuizQuestion updates = new QuizQuestion();
+        updates.setQuizQuestionText("   ");
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizQuestionService.updateQuestion(40L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(quizQuestionRepository, never()).save(any());
+    }
+
+    @Test
+    void updateQuestion_orderIndex_updatesCorrectly() {
+        given(quizQuestionRepository.findById(40L)).willReturn(Optional.of(question));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(quizQuestionRepository.save(any(QuizQuestion.class))).willAnswer(inv -> inv.getArgument(0));
+
+        QuizQuestion updates = new QuizQuestion();
+        updates.setOrderIndex(5);
+
+        QuizQuestion result = quizQuestionService.updateQuestion(40L, updates, owner);
+
+        assertEquals(5, result.getOrderIndex());
+        verify(quizQuestionRepository).save(question);
     }
 
     // ─── 908 deleteQuestion ───────────────────────────────────────────────────

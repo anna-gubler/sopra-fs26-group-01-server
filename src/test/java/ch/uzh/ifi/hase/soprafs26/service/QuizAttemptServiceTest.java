@@ -255,6 +255,52 @@ class QuizAttemptServiceTest {
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
+    @Test
+    void submitAttempt_partiallyCorrect_calculatesScoreCorrectly() {
+        QuizQuestion question2 = new QuizQuestion();
+        question2.setId(41L);
+        question2.setQuizId(30L);
+
+        QuizAnswer correctAnswer2 = new QuizAnswer();
+        correctAnswer2.setId(52L);
+        correctAnswer2.setQuizQuestionId(41L);
+        correctAnswer2.setIsCorrect(false);
+
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(30L))
+                .willReturn(List.of(question, question2));
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(correctAnswer));  // correct
+        given(quizAnswerRepository.findById(52L)).willReturn(Optional.of(correctAnswer2)); // wrong
+        given(quizAttemptRepository.save(any(QuizAttempt.class))).willAnswer(inv -> inv.getArgument(0));
+
+        SubmittedAnswerDTO s1 = new SubmittedAnswerDTO();
+        s1.setQuizQuestionId(question.getId());
+        s1.setSelectedAnswerId(correctAnswer.getId());
+
+        SubmittedAnswerDTO s2 = new SubmittedAnswerDTO();
+        s2.setQuizQuestionId(question2.getId());
+        s2.setSelectedAnswerId(correctAnswer2.getId());
+
+        QuizAttempt result = quizAttemptService.submitAttempt(60L, List.of(s1, s2), student);
+
+        assertEquals(50, result.getScore()); // 1 out of 2 correct = 50%
+        assertFalse(result.getPassed());     // 50 < 70 passMark
+    }
+
+    @Test
+    void submitAttempt_noQuestions_returnsScoreZero() {
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(30L)).willReturn(List.of());
+        given(quizAttemptRepository.save(any(QuizAttempt.class))).willAnswer(inv -> inv.getArgument(0));
+
+        QuizAttempt result = quizAttemptService.submitAttempt(60L, List.of(), student);
+
+        assertEquals(0, result.getScore());
+        assertFalse(result.getPassed());
+    }
+
     //1003 getAttemptById
 
     @Test
