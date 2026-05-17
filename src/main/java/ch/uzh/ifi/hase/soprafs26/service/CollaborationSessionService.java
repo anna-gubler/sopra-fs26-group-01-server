@@ -1,11 +1,13 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
+import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.LiveQuestionRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
@@ -33,6 +35,7 @@ public class CollaborationSessionService {
     private final SkillMapMembershipRepository membershipRepository;
     private final SpeedFeedbackService speedFeedbackService;
     private final CurrentUnderstandingService currentUnderstandingService;
+    private final LiveQuestionRepository liveQuestionRepository;
 
     public CollaborationSessionService(CollaborationSessionRepository sessionRepository,
             WebSocketBroadcastService broadcastService, SkillMapRepository skillMapRepository,
@@ -41,7 +44,8 @@ public class CollaborationSessionService {
             CurrentUnderstandingService currentUnderstandingService,
             SkillRepository skillRepository,
             QuizRepository quizRepository,
-            QuizAttemptRepository quizAttemptRepository) {
+            QuizAttemptRepository quizAttemptRepository,
+            LiveQuestionRepository liveQuestionRepository) {
         this.sessionRepository = sessionRepository;
         this.broadcastService = broadcastService;
         this.skillMapRepository = skillMapRepository;
@@ -51,6 +55,7 @@ public class CollaborationSessionService {
         this.quizRepository = quizRepository;
         this.skillRepository = skillRepository;
         this.quizAttemptRepository = quizAttemptRepository;
+        this.liveQuestionRepository = liveQuestionRepository;
     }
 
     public CollaborationSession startSession(Long skillMapId, User user) {
@@ -145,6 +150,57 @@ public class CollaborationSessionService {
             return dto;
         }).toList();
     }
+    public List<CollaborationSession> getPastSessions(Long skillMapId, User user) {
+        SkillMap skillMap = skillMapRepository.findById(skillMapId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+        if (!skillMap.getOwnerId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can view past sessions");
+        }
+
+        return sessionRepository.findBySkillMapIdAndIsActiveFalseOrderByStartedAtDesc(skillMapId);
+    }
+
+    public CollaborationSession restartSession(Long skillMapId, Long sessionId, User user) {
+        SkillMap skillMap = skillMapRepository.findById(skillMapId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+        if (!skillMap.getOwnerId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can restart a session");
+        }
+
+        CollaborationSession session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+        if (!session.getSkillMapId().equals(skillMapId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Session does not belong to this skill map");
+        }
+
+        if (session.isActive()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Session is already active");
+        }
+
+        if (sessionRepository.existsBySkillMapIdAndIsActiveTrue(skillMapId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A session is already active for this skill map");
+        }
+
+        List<LiveQuestion> questions = liveQuestionRepository.findBySessionId(sessionId);
+        for (LiveQuestion q : questions) {
+            if (!Boolean.TRUE.equals(q.getIsAddressed())) {
+                q.setIsAddressed(true);
+                q.setUpdatedAt(LocalDateTime.now());
+                liveQuestionRepository.save(q);
+            }
+        }
+
+        session.setActive(true);
+        session.setEndedAt(null);
+        session = sessionRepository.save(session);
+
+        broadcastService.broadcastSessionStarted(skillMapId, session.getId(), session.getStartedAt());
+        return session;
+    }
+
     public void setPromptedQuiz(Long skillMapId, User user, Long skillId) {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
