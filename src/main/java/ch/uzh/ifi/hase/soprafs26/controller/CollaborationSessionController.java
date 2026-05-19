@@ -22,6 +22,22 @@ public class CollaborationSessionController {
         this.sessionService = sessionService;
     }
 
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<CollaborationSession> getPastSessions(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return sessionService.getPastSessions(skillMapId, user);
+    }
+
+    @PostMapping("/{sessionId}/restart")
+    @ResponseStatus(HttpStatus.OK)
+    public CollaborationSession restartSession(@PathVariable Long skillMapId,
+                                               @PathVariable Long sessionId,
+                                               HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return sessionService.restartSession(skillMapId, sessionId, user);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CollaborationSession startSession(@PathVariable Long skillMapId, HttpServletRequest request) {
