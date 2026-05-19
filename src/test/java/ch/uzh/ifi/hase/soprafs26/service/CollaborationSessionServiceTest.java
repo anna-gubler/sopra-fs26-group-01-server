@@ -1,11 +1,13 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
+import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.LiveQuestionRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
@@ -66,6 +68,9 @@ public class CollaborationSessionServiceTest {
 
     @Mock
     private QuizAttemptRepository quizAttemptRepository;
+
+    @Mock
+    private LiveQuestionRepository liveQuestionRepository;
 
     @BeforeEach
     public void setup() {
@@ -393,5 +398,219 @@ public class CollaborationSessionServiceTest {
         assertEquals(5L, result.get(0).getSkillId());
         assertEquals(3, result.get(0).getTotalAttempts());
         assertEquals(75.0, result.get(0).getAverageScore());
+    }
+
+    //restartSession
+
+    @Test
+    public void restartSession_validInput_success() {
+        CollaborationSession inactiveSession = buildActiveSession();
+        inactiveSession.setActive(false);
+        inactiveSession.setEndedAt(LocalDateTime.now());
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(inactiveSession));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(liveQuestionRepository.findBySessionId(SESSION_ID)).thenReturn(List.of());
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(inactiveSession);
+
+        CollaborationSession result = sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner());
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertTrue(captor.getValue().isActive());
+        assertNull(captor.getValue().getEndedAt());
+
+        Mockito.verify(broadcastService, Mockito.times(1))
+                .broadcastSessionStarted(Mockito.eq(SKILL_MAP_ID), Mockito.eq(SESSION_ID), Mockito.any());
+    }
+
+    @Test
+    public void restartSession_skillMapNotFound_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner()));
+    }
+
+    @Test
+    public void restartSession_notOwner_throwsForbidden() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOtherUser()));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    public void restartSession_sessionNotFound_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner()));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    }
+
+    @Test
+    public void restartSession_sessionDoesNotBelongToSkillMap_throwsForbidden() {
+        CollaborationSession session = buildActiveSession();
+        session.setSkillMapId(999L); // Different skill map
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner()));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    public void restartSession_alreadyActive_throwsConflict() {
+        CollaborationSession activeSession = buildActiveSession();
+        activeSession.setActive(true);
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(activeSession));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner()));
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    public void restartSession_anotherSessionAlreadyActive_throwsConflict() {
+        CollaborationSession inactiveSession = buildActiveSession();
+        inactiveSession.setActive(false);
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(inactiveSession));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner()));
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    public void restartSession_marksUnaddressedQuestionsAsAddressed() {
+        CollaborationSession inactiveSession = buildActiveSession();
+        inactiveSession.setActive(false);
+
+        LiveQuestion q1 = new LiveQuestion();
+        q1.setId(1L);
+        q1.setSessionId(SESSION_ID);
+        q1.setIsAddressed(false);
+
+        LiveQuestion q2 = new LiveQuestion();
+        q2.setId(2L);
+        q2.setSessionId(SESSION_ID);
+        q2.setIsAddressed(true);
+
+        LiveQuestion q3 = new LiveQuestion();
+        q3.setId(3L);
+        q3.setSessionId(SESSION_ID);
+        q3.setIsAddressed(false);
+
+        List<LiveQuestion> questions = List.of(q1, q2, q3);
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(inactiveSession));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(liveQuestionRepository.findBySessionId(SESSION_ID)).thenReturn(questions);
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(inactiveSession);
+
+        sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner());
+
+        ArgumentCaptor<LiveQuestion> questionCaptor = ArgumentCaptor.forClass(LiveQuestion.class);
+        Mockito.verify(liveQuestionRepository, Mockito.times(2)).save(questionCaptor.capture());
+
+        List<LiveQuestion> savedQuestions = questionCaptor.getAllValues();
+        assertEquals(2, savedQuestions.size());
+        assertTrue(savedQuestions.stream().allMatch(q -> Boolean.TRUE.equals(q.getIsAddressed())));
+    }
+
+    @Test
+    public void restartSession_noLiveQuestions_restarts() {
+        CollaborationSession inactiveSession = buildActiveSession();
+        inactiveSession.setActive(false);
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(inactiveSession));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(liveQuestionRepository.findBySessionId(SESSION_ID)).thenReturn(List.of());
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(inactiveSession);
+
+        sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner());
+
+        Mockito.verify(liveQuestionRepository, Mockito.never()).save(Mockito.any());
+    }
+
+    @Test
+    public void restartSession_clearsEndedAt() {
+        CollaborationSession inactiveSession = buildActiveSession();
+        inactiveSession.setActive(false);
+        inactiveSession.setEndedAt(LocalDateTime.now());
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(inactiveSession));
+        Mockito.when(sessionRepository.existsBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID)).thenReturn(false);
+        Mockito.when(liveQuestionRepository.findBySessionId(SESSION_ID)).thenReturn(List.of());
+        Mockito.when(sessionRepository.save(Mockito.any())).thenReturn(inactiveSession);
+
+        sessionService.restartSession(SKILL_MAP_ID, SESSION_ID, buildOwner());
+
+        ArgumentCaptor<CollaborationSession> captor = ArgumentCaptor.forClass(CollaborationSession.class);
+        Mockito.verify(sessionRepository).save(captor.capture());
+        assertNull(captor.getValue().getEndedAt());
+    }
+
+    // --- getPastSessions ---
+
+    @Test
+    public void getPastSessions_validOwner_returnsPastSessions() {
+        CollaborationSession past1 = buildActiveSession();
+        past1.setActive(false);
+        CollaborationSession past2 = buildActiveSession();
+        past2.setActive(false);
+
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveFalseOrderByStartedAtDesc(SKILL_MAP_ID))
+                .thenReturn(List.of(past1, past2));
+
+        List<CollaborationSession> result = sessionService.getPastSessions(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(2, result.size());
+        Mockito.verify(sessionRepository, Mockito.times(1))
+                .findBySkillMapIdAndIsActiveFalseOrderByStartedAtDesc(SKILL_MAP_ID);
+    }
+
+    @Test
+    public void getPastSessions_notOwner_throwsForbidden() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.getPastSessions(SKILL_MAP_ID, buildOtherUser()));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    public void getPastSessions_skillMapNotFound_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> sessionService.getPastSessions(SKILL_MAP_ID, buildOwner()));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    }
+
+    @Test
+    public void getPastSessions_noSessions_returnsEmpty() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveFalseOrderByStartedAtDesc(SKILL_MAP_ID))
+                .thenReturn(List.of());
+
+        List<CollaborationSession> result = sessionService.getPastSessions(SKILL_MAP_ID, buildOwner());
+
+        assertTrue(result.isEmpty());
     }
 }
