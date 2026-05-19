@@ -5,6 +5,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.UnderstandingRating;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.LiveQuestionRepository;
@@ -13,7 +14,10 @@ import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.UnderstandingRatingRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SessionStateDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillRatingSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.websocket.WebSocketBroadcastService;
 
 import org.springframework.http.HttpStatus;
@@ -22,6 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CollaborationSessionService {
@@ -36,6 +42,7 @@ public class CollaborationSessionService {
     private final SpeedFeedbackService speedFeedbackService;
     private final CurrentUnderstandingService currentUnderstandingService;
     private final LiveQuestionRepository liveQuestionRepository;
+    private final UnderstandingRatingRepository understandingRatingRepository;
 
     public CollaborationSessionService(CollaborationSessionRepository sessionRepository,
             WebSocketBroadcastService broadcastService, SkillMapRepository skillMapRepository,
@@ -45,7 +52,8 @@ public class CollaborationSessionService {
             SkillRepository skillRepository,
             QuizRepository quizRepository,
             QuizAttemptRepository quizAttemptRepository,
-            LiveQuestionRepository liveQuestionRepository) {
+            LiveQuestionRepository liveQuestionRepository,
+            UnderstandingRatingRepository understandingRatingRepository) {
         this.sessionRepository = sessionRepository;
         this.broadcastService = broadcastService;
         this.skillMapRepository = skillMapRepository;
@@ -56,6 +64,7 @@ public class CollaborationSessionService {
         this.skillRepository = skillRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.liveQuestionRepository = liveQuestionRepository;
+        this.understandingRatingRepository = understandingRatingRepository;
     }
 
     public CollaborationSession startSession(Long skillMapId, User user) {
@@ -102,7 +111,7 @@ public class CollaborationSessionService {
         currentUnderstandingService.clearSession(session.getId());
 
         //design decision to NOT delete the questions after session end
-        // liveQuestionService.deleteAllQuestionsForSession(session.getId()); 
+        // liveQuestionService.deleteAllQuestionsForSession(session.getId());
 
         broadcastService.broadcastSessionEnded(skillMapId, session.getId(), session.getEndedAt());
     }
@@ -115,6 +124,45 @@ public class CollaborationSessionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session found"));
     }
 
+    public SessionStateDTO getActiveSessionState(Long skillMapId, User user) {
+        CollaborationSession session = getActiveSession(skillMapId, user);
+
+        List<LiveQuestion> questions = liveQuestionRepository.findBySessionId(session.getId());
+
+        List<UnderstandingRating> allRatings = understandingRatingRepository.findBySessionId(session.getId());
+        Map<Long, List<UnderstandingRating>> bySkill = allRatings.stream()
+                .collect(Collectors.groupingBy(UnderstandingRating::getSkillId));
+        List<SkillRatingSummaryDTO> skillRatings = bySkill.entrySet().stream().map(entry -> {
+            List<UnderstandingRating> ratings = entry.getValue();
+            double avg = ratings.stream().mapToInt(UnderstandingRating::getRating).average().orElse(0.0);
+            Integer myRating = ratings.stream()
+                    .filter(r -> r.getUserId().equals(user.getId()))
+                    .map(UnderstandingRating::getRating)
+                    .findFirst()
+                    .orElse(null);
+            SkillRatingSummaryDTO dto = new SkillRatingSummaryDTO();
+            dto.setSkillId(entry.getKey());
+            dto.setAverageRating(avg);
+            dto.setTotalRatings(ratings.size());
+            dto.setMyRating(myRating);
+            return dto;
+        }).collect(Collectors.toList());
+
+        List<DashboardQuizSummaryDTO> quizResults = computeQuizResults(session, skillMapId);
+
+        SessionStateDTO state = new SessionStateDTO();
+        state.setId(session.getId());
+        state.setSkillMapId(session.getSkillMapId());
+        state.setStartedAt(session.getStartedAt());
+        state.setEndedAt(session.getEndedAt());
+        state.setActive(session.isActive());
+        state.setPromptedQuizSkillId(session.getPromptedQuizSkillId());
+        state.setQuestions(questions);
+        state.setSkillRatings(skillRatings);
+        state.setQuizResults(quizResults);
+        return state;
+    }
+
     public CollaborationSession getSessionById(Long sessionId) {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
@@ -122,26 +170,29 @@ public class CollaborationSessionService {
 
     public List<DashboardQuizSummaryDTO> getQuizResults(Long skillMapId, User user) {
         CollaborationSession session = getActiveSession(skillMapId, user);
+        return computeQuizResults(session, skillMapId);
+    }
 
+    private List<DashboardQuizSummaryDTO> computeQuizResults(CollaborationSession session, Long skillMapId) {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SkillMap not found"));
         List<Skill> skills = skillRepository.findBySkillMap(skillMap);
 
         List<Long> quizIds = skills.stream()
-            .flatMap(skill -> quizRepository.findBySkillId(skill.getId()).stream())
-            .map(Quiz::getId)
-            .toList();
+                .flatMap(skill -> quizRepository.findBySkillId(skill.getId()).stream())
+                .map(Quiz::getId)
+                .toList();
 
         if (quizIds.isEmpty()) return List.of();
 
         List<Object[]> rows = quizAttemptRepository
-            .aggregateByQuizIdsAndStartedAt(quizIds, session.getStartedAt());
+                .aggregateByQuizIdsAndStartedAt(quizIds, session.getStartedAt());
 
         return rows.stream().map(row -> {
             Long quizId = (Long) row[0];
             Long skillId = quizRepository.findById(quizId)
-                .map(Quiz::getSkillId)
-                .orElse(null);
+                    .map(Quiz::getSkillId)
+                    .orElse(null);
             DashboardQuizSummaryDTO dto = new DashboardQuizSummaryDTO();
             dto.setQuizId(quizId);
             dto.setSkillId(skillId);
@@ -150,6 +201,7 @@ public class CollaborationSessionService {
             return dto;
         }).toList();
     }
+
     public List<CollaborationSession> getPastSessions(Long skillMapId, User user) {
         SkillMap skillMap = skillMapRepository.findById(skillMapId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
