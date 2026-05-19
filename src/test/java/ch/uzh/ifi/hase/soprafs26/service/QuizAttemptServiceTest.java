@@ -337,4 +337,102 @@ class QuizAttemptServiceTest {
                 () -> quizAttemptService.getAttemptById(60L, student));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
+
+    @Test
+    void createAttempt_quizNotFound_throws404() {
+        given(quizRepository.findById(30L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.createAttempt(30L, student));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void createAttempt_skillNotFound_throws404() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.createAttempt(30L, student));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void createAttempt_unsubmittedAttemptExists_throwsConflict() {
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
+
+        QuizAttempt existing = new QuizAttempt();
+        existing.setPassed(null);
+        given(quizAttemptRepository.findTopByUserIdAndQuizIdOrderByAttemptedAtDesc(student.getId(), 30L))
+                .willReturn(Optional.of(existing));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.createAttempt(30L, student));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    @Test
+    void submitAttempt_attemptNotFound_throws404() {
+        given(quizAttemptRepository.findById(999L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.submitAttempt(999L, List.of(), student));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void submitAttempt_quizNotFound_throws404() {
+        attempt.setUserId(student.getId());
+        attempt.setPassed(null);
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.submitAttempt(60L, List.of(), student));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void submitAttempt_answerNotFound_throws400() {
+        attempt.setUserId(student.getId());
+        attempt.setPassed(null);
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(30L)).willReturn(List.of(question));
+        given(quizAnswerRepository.findById(999L)).willReturn(Optional.empty());
+
+        SubmittedAnswerDTO submitted = new SubmittedAnswerDTO();
+        submitted.setQuizQuestionId(question.getId());
+        submitted.setSelectedAnswerId(999L);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.submitAttempt(60L, List.of(submitted), student));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void submitAttempt_answerQuestionMismatch_throws400() {
+        attempt.setUserId(student.getId());
+        attempt.setPassed(null);
+
+        QuizAnswer wrongQuestion = new QuizAnswer();
+        wrongQuestion.setId(50L);
+        wrongQuestion.setQuizQuestionId(999L);
+        wrongQuestion.setIsCorrect(true);
+
+        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
+        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
+        given(quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(30L)).willReturn(List.of(question));
+        given(quizAnswerRepository.findById(50L)).willReturn(Optional.of(wrongQuestion));
+
+        SubmittedAnswerDTO submitted = new SubmittedAnswerDTO();
+        submitted.setQuizQuestionId(question.getId());
+        submitted.setSelectedAnswerId(50L);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> quizAttemptService.submitAttempt(60L, List.of(submitted), student));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
 }

@@ -281,6 +281,16 @@ public class CollaborationSessionServiceTest {
     }
 
     @Test
+    public void setPromptedQuiz_skillMapNotFound_throwsNotFound() {
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> sessionService.setPromptedQuiz(SKILL_MAP_ID, buildOwner(), 42L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
     public void setPromptedQuiz_notOwner_throwsForbidden() {
         Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
 
@@ -334,6 +344,19 @@ public class CollaborationSessionServiceTest {
     }
 
     // getQuizResults
+
+    @Test
+    public void getQuizResults_skillMapNotFound_throwsNotFound() {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> sessionService.getQuizResults(SKILL_MAP_ID, buildOwner()));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
 
     @Test
     public void getQuizResults_noSkillsForMap_returnsEmpty() {

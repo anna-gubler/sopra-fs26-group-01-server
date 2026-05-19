@@ -414,4 +414,13 @@ public class UserServiceTest {
 				() -> userService.changePassword(managedUser, RAW_PASSWORD, "newPass1", "newPass2"));
 	}
 
+	@Test
+	public void changePassword_userNotFound_throwsNotFoundException() {
+		User managedUser = buildPersistedUser();
+		Mockito.when(userRepository.findById(TEST_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResponseStatusException.class,
+				() -> userService.changePassword(managedUser, RAW_PASSWORD, "newPass1", "newPass1"));
+	}
+
 }

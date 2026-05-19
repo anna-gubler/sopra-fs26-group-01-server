@@ -737,4 +737,134 @@ class SkillMapServiceTest {
                 verify(quizQuestionRepository, times(1)).save(any(QuizQuestion.class));
                 verify(quizAnswerRepository, times(1)).save(any(QuizAnswer.class));
         }
+
+    @Test
+    void importSkillMap_nullIsLockedAndNullIsActiveAndNullIsCorrect_defaultToFalse() {
+        QuizAnswerExportDTO answerDTO = new QuizAnswerExportDTO();
+        answerDTO.setAnswerText("answer");
+        answerDTO.setIsCorrect(null);
+
+        QuizQuestionExportDTO questionDTO = new QuizQuestionExportDTO();
+        questionDTO.setQuizQuestionText("question");
+        questionDTO.setOrderIndex(1);
+        questionDTO.setAnswers(List.of(answerDTO));
+
+        QuizExportDTO quizDTO = new QuizExportDTO();
+        quizDTO.setIsActive(null);
+        quizDTO.setPassMark(70);
+        quizDTO.setQuestions(List.of(questionDTO));
+
+        SkillExportDTO skillDTO = new SkillExportDTO();
+        skillDTO.setExportId("skill-null");
+        skillDTO.setName("NullFields");
+        skillDTO.setLevel(1);
+        skillDTO.setIsLocked(null);
+        skillDTO.setQuiz(quizDTO);
+
+        SkillMapExportDTO importDTO = new SkillMapExportDTO();
+        importDTO.setTitle("Null Fields Map");
+        importDTO.setNumberOfLevels(1);
+        importDTO.setIsPublic(false);
+        importDTO.setSkills(List.of(skillDTO));
+        importDTO.setDependencies(List.of());
+
+        given(skillMapRepository.existsByInviteCode(any())).willReturn(false);
+        given(skillMapRepository.save(any(SkillMap.class))).willReturn(skillMap);
+
+        Skill savedSkill = new Skill();
+        savedSkill.setId(99L);
+        given(skillRepository.save(any(Skill.class))).willReturn(savedSkill);
+
+        Quiz savedQuiz = new Quiz();
+        savedQuiz.setId(10L);
+        given(quizRepository.save(any(Quiz.class))).willReturn(savedQuiz);
+
+        QuizQuestion savedQuestion = new QuizQuestion();
+        savedQuestion.setId(100L);
+        given(quizQuestionRepository.save(any(QuizQuestion.class))).willReturn(savedQuestion);
+
+        skillMapService.importSkillMap(importDTO, owner);
+
+        verify(quizAnswerRepository, times(1)).save(any(QuizAnswer.class));
+    }
+
+    // ─── updateSkillMap numberOfLevels ──────────────────────────────────────────
+
+    @Test
+    void updateSkillMap_validNumberOfLevels_updatesSuccessfully() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+        given(skillMapRepository.save(any(SkillMap.class))).willAnswer(inv -> inv.getArgument(0));
+
+        SkillMap updates = new SkillMap();
+        updates.setNumberOfLevels(5);
+
+        SkillMap result = skillMapService.updateSkillMap(10L, updates, owner);
+
+        assertEquals(5, result.getNumberOfLevels());
+    }
+
+    @Test
+    void updateSkillMap_invalidNumberOfLevels_throws400() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        SkillMap updates = new SkillMap();
+        updates.setNumberOfLevels(0);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.updateSkillMap(10L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    // ─── joinSkillMap null/blank inviteCode ─────────────────────────────────────
+
+    @Test
+    void joinSkillMap_nullInviteCode_throws400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.joinSkillMap(null, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void joinSkillMap_blankInviteCode_throws400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.joinSkillMap("   ", owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    // ─── removeMember skillMap not found ─────────────────────────────────────────
+
+    @Test
+    void removeMember_skillMapNotFound_throws404() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillMapService.removeMember(10L, otherUser.getId(), owner));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ─── getSkillMapGraph ─────────────────────────────────────────────────────────
+
+    @Test
+    void getSkillMapGraph_returnsDTOWithSkillsAndDependencies() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, owner.getId())).willReturn(true);
+
+        Skill skill = new Skill();
+        skill.setId(5L);
+        skill.setName("Skill A");
+        skill.setSkillMap(skillMap);
+        given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill));
+        given(dependencyRepository.findByFromSkill_IdIn(List.of(5L))).willReturn(List.of());
+
+        ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO graph =
+                skillMapService.getSkillMapGraph(10L, owner);
+
+        assertNotNull(graph);
+        assertEquals(10L, graph.getSkillMapId());
+        assertEquals("Test Map", graph.getTitle());
+        assertEquals(1, graph.getSkills().size());
+        assertTrue(graph.getDependencies().isEmpty());
+    }
 }

@@ -7,6 +7,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapExportDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapJoinDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapPutDTO;
@@ -424,6 +425,35 @@ public class SkillMapControllerTest {
                 .file(file)
                 .header("Authorization", TOKEN))
                 .andExpect(status().isBadRequest());
+    }
+
+    // GET /skillmaps - returns list with items (covers DTO conversion loop)
+    @Test
+    public void givenNonEmptyList_whenGetAllSkillMaps_thenReturnDTOs() throws Exception {
+        mockAuthentication(buildUser(), true);
+        given(skillMapService.getSkillMaps(any())).willReturn(java.util.List.of(newSkillMap()));
+
+        mockMvc.perform(get("/skillmaps")
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Test Map"));
+    }
+
+    // GET /skillmaps/{skillMapId}/graph
+    @Test
+    public void givenValidToken_whenGetSkillMapGraph_thenReturnOk() throws Exception {
+        mockAuthentication(buildUser(), true);
+        SkillMapGraphDTO graph = new SkillMapGraphDTO();
+        graph.setSkillMapId(1L);
+        graph.setTitle("Test Map");
+        given(skillMapService.getSkillMapGraph(eq(1L), any())).willReturn(graph);
+
+        mockMvc.perform(get("/skillmaps/1/graph")
+                .header("Authorization", TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.skillMapId").value(1L))
+                .andExpect(jsonPath("$.title").value("Test Map"));
     }
 
     private String asJsonString(final Object object) {
