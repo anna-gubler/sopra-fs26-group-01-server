@@ -11,6 +11,7 @@ public class SkillGetDTO {
     private Boolean isLocked;
     private Long skillMapId;
     private String notes;
+    private Boolean isUnderstood;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -41,4 +42,7 @@ public class SkillGetDTO {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public Boolean getIsUnderstood() { return isUnderstood; }
+    public void setIsUnderstood(Boolean isUnderstood) { this.isUnderstood = isUnderstood; }
 }
