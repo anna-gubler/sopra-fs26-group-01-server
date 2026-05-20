@@ -25,6 +25,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.QuizQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
+import ch.uzh.ifi.hase.soprafs26.entity.StudentProgress;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAnswerRepository;
@@ -33,6 +34,7 @@ import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.StudentProgressRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyExportDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DependencyGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.QuizAnswerExportDTO;
@@ -56,6 +58,7 @@ public class SkillMapService {
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizAnswerRepository quizAnswerRepository;
+    private final StudentProgressRepository studentProgressRepository;
 
     public SkillMapService(
             @Qualifier("skillMapRepository") SkillMapRepository skillMapRepository,
@@ -64,7 +67,8 @@ public class SkillMapService {
             @Qualifier("dependencyRepository") DependencyRepository dependencyRepository,
             @Qualifier("quizRepository") QuizRepository quizRepository,
             @Qualifier("quizQuestionRepository") QuizQuestionRepository quizQuestionRepository,
-            @Qualifier("quizAnswerRepository") QuizAnswerRepository quizAnswerRepository) {
+            @Qualifier("quizAnswerRepository") QuizAnswerRepository quizAnswerRepository,
+            @Qualifier("studentProgressRepository") StudentProgressRepository studentProgressRepository) {
         this.skillMapRepository = skillMapRepository;
         this.skillMapMembershipRepository = skillMapMembershipRepository;
         this.skillRepository = skillRepository;
@@ -72,6 +76,7 @@ public class SkillMapService {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.quizAnswerRepository = quizAnswerRepository;
+        this.studentProgressRepository = studentProgressRepository;
     }
 
     // 201 - returns only maps the requester is a member of (spec 201.1)
@@ -246,7 +251,7 @@ public class SkillMapService {
         log.debug("Removed member {} from SkillMap {}", userId, skillMapId);
     }
 
-    // 209 - stub: returns skillmap metadata; skills/deps/progress added once those entities exist
+    // 209
     public SkillMapGraphDTO getSkillMapGraph(Long skillMapId, User requester) {
         SkillMap map = getSkillMapById(skillMapId, requester);
         
@@ -256,6 +261,13 @@ public class SkillMapService {
                 .collect(Collectors.toList());
 
         List<Long> skillIds = skillDTOs.stream().map(SkillGetDTO::getId).collect(Collectors.toList());
+
+        Map<Long, Boolean> progressMap = studentProgressRepository
+                .findByUserIdAndSkillIdIn(requester.getId(), skillIds)
+                .stream()
+                .collect(Collectors.toMap(StudentProgress::getSkillId, StudentProgress::getIsUnderstood));
+        skillDTOs.forEach(dto -> dto.setIsUnderstood(progressMap.getOrDefault(dto.getId(), false)));
+
         List<DependencyGetDTO> dependencyDTOs = dependencyRepository.findByFromSkill_IdIn(skillIds)
                 .stream()
                 .map(DTOMapper.INSTANCE::convertDependencyEntityToGetDTO)
