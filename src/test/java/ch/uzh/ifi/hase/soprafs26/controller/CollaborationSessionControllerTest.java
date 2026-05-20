@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SessionStateDTO;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
@@ -142,7 +143,10 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenActiveSession_whenGetActiveSession_thenReturnOk() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any())).willReturn(buildActiveSession());
+        SessionStateDTO state = new SessionStateDTO();
+        state.setId(10L);
+        state.setActive(true);
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any())).willReturn(state);
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
                 .header("Authorization", "Bearer " + TOKEN)
@@ -156,7 +160,7 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenNoActiveSession_whenGetActiveSession_thenReturnNotFound() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session"));
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
@@ -170,7 +174,7 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenNonMember_whenGetActiveSession_thenReturnForbidden() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this skill map"));
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)

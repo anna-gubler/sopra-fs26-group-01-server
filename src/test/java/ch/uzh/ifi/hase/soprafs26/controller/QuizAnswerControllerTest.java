@@ -5,9 +5,6 @@ import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.service.QuizAnswerService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.core.JacksonException;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -15,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -59,14 +55,6 @@ public class QuizAnswerControllerTest {
         answer.setAnswerText("Java is a programming language.");
         answer.setIsCorrect(true);
         return answer;
-    }
-
-    private String asJsonString(Object object) {
-        try {
-            return new ObjectMapper().writeValueAsString(object);
-        } catch (JacksonException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not serialize object");
-        }
     }
 
     // --- GET /quizQuestions/{quizQuestionId}/answers ---
