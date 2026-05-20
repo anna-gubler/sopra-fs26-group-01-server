@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SessionStateDTO;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
@@ -142,7 +143,10 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenActiveSession_whenGetActiveSession_thenReturnOk() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any())).willReturn(buildActiveSession());
+        SessionStateDTO state = new SessionStateDTO();
+        state.setId(10L);
+        state.setActive(true);
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any())).willReturn(state);
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
                 .header("Authorization", "Bearer " + TOKEN)
@@ -156,7 +160,7 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenNoActiveSession_whenGetActiveSession_thenReturnNotFound() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No active session"));
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
@@ -170,7 +174,7 @@ public class CollaborationSessionControllerTest {
     @Test
     public void givenNonMember_whenGetActiveSession_thenReturnForbidden() throws Exception {
         mockAuthentication(buildUser(), true);
-        given(sessionService.getActiveSession(eq(SKILL_MAP_ID), any()))
+        given(sessionService.getActiveSessionState(eq(SKILL_MAP_ID), any()))
                 .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a member of this skill map"));
 
         MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions/active", SKILL_MAP_ID)
@@ -360,5 +364,171 @@ public class CollaborationSessionControllerTest {
 
         mockMvc.perform(getRequest)
                 .andExpect(status().isUnauthorized());
+        }
+
+        // POST /skillmaps/{skillMapId}/sessions/{sessionId}/restart
+
+        @Test
+        public void givenValidOwner_whenRestartSession_thenReturnOk() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any())).willReturn(buildActiveSession());
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.active", is(true)));
+        }
+
+        @Test
+        public void givenNonOwner_whenRestartSession_thenReturnForbidden() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can restart a session"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isForbidden());
+        }
+
+        @Test
+        public void givenNonExistingSkillMap_whenRestartSession_thenReturnNotFound() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isNotFound());
+        }
+
+        @Test
+        public void givenNonExistingSession_whenRestartSession_thenReturnNotFound() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isNotFound());
+        }
+
+        @Test
+        public void givenSessionAlreadyActive_whenRestartSession_thenReturnConflict() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Session is already active"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isConflict());
+        }
+
+        @Test
+        public void givenAnotherSessionAlreadyActive_whenRestartSession_thenReturnConflict() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "A session is already active for this skill map"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isConflict());
+        }
+
+        @Test
+        public void givenSessionNotBelongingToSkillMap_whenRestartSession_thenReturnForbidden() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.restartSession(eq(SKILL_MAP_ID), eq(1L), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Session does not belong to this skill map"));
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isForbidden());
+        }
+
+        @Test
+        public void givenNoAuthorization_whenRestartSession_thenReturnUnauthorized() throws Exception {
+                mockAuthentication(buildUser(), false);
+
+                MockHttpServletRequestBuilder postRequest = post("/skillmaps/{skillMapId}/sessions/{sessionId}/restart", SKILL_MAP_ID, 1L)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(postRequest)
+                        .andExpect(status().isUnauthorized());
+        }
+
+        // --- GET /skillmaps/{skillMapId}/sessions ---
+
+        @Test
+        public void givenValidOwner_whenGetPastSessions_thenReturnOk() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.getPastSessions(eq(SKILL_MAP_ID), any())).willReturn(List.of(buildActiveSession()));
+
+                MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(getRequest)
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$[0].active", is(true)));
+        }
+
+        @Test
+        public void givenNonOwner_whenGetPastSessions_thenReturnForbidden() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.getPastSessions(eq(SKILL_MAP_ID), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can view past sessions"));
+
+                MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(getRequest)
+                        .andExpect(status().isForbidden());
+        }
+
+        @Test
+        public void givenNonExistingSkillMap_whenGetPastSessions_thenReturnNotFound() throws Exception {
+                mockAuthentication(buildUser(), true);
+                given(sessionService.getPastSessions(eq(SKILL_MAP_ID), any()))
+                        .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill map not found"));
+
+                MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(getRequest)
+                        .andExpect(status().isNotFound());
+        }
+
+        @Test
+        public void givenNoAuthorization_whenGetPastSessions_thenReturnUnauthorized() throws Exception {
+                mockAuthentication(buildUser(), false);
+
+                MockHttpServletRequestBuilder getRequest = get("/skillmaps/{skillMapId}/sessions", SKILL_MAP_ID)
+                        .contentType(MediaType.APPLICATION_JSON);
+
+                mockMvc.perform(getRequest)
+                        .andExpect(status().isUnauthorized());
         }
 }

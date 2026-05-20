@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs26.controller;
 import ch.uzh.ifi.hase.soprafs26.entity.CollaborationSession;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SessionStateDTO;
 import ch.uzh.ifi.hase.soprafs26.service.CollaborationSessionService;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -22,6 +23,22 @@ public class CollaborationSessionController {
         this.sessionService = sessionService;
     }
 
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<CollaborationSession> getPastSessions(@PathVariable Long skillMapId, HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return sessionService.getPastSessions(skillMapId, user);
+    }
+
+    @PostMapping("/{sessionId}/restart")
+    @ResponseStatus(HttpStatus.OK)
+    public CollaborationSession restartSession(@PathVariable Long skillMapId,
+                                               @PathVariable Long sessionId,
+                                               HttpServletRequest request) {
+        User user = (User) request.getAttribute("authenticatedUser");
+        return sessionService.restartSession(skillMapId, sessionId, user);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CollaborationSession startSession(@PathVariable Long skillMapId, HttpServletRequest request) {
@@ -31,9 +48,9 @@ public class CollaborationSessionController {
 
     @GetMapping("/active")
     @ResponseStatus(HttpStatus.OK)
-    public CollaborationSession getActiveSession(@PathVariable Long skillMapId, HttpServletRequest request) {
+    public SessionStateDTO getActiveSession(@PathVariable Long skillMapId, HttpServletRequest request) {
         User user = (User) request.getAttribute("authenticatedUser");
-        return sessionService.getActiveSession(skillMapId, user);
+        return sessionService.getActiveSessionState(skillMapId, user);
     }
 
     @PostMapping("/active/end")
