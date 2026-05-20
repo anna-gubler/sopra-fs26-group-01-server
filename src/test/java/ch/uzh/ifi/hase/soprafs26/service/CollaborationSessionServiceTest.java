@@ -5,11 +5,14 @@ import ch.uzh.ifi.hase.soprafs26.entity.LiveQuestion;
 import ch.uzh.ifi.hase.soprafs26.entity.Quiz;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
+import ch.uzh.ifi.hase.soprafs26.entity.UnderstandingRating;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.CollaborationSessionRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.LiveQuestionRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.UnderstandingRatingRepository;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.DashboardQuizSummaryDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SessionStateDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.SkillRatingSummaryDTO;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAttemptRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.SkillMapMembershipRepository;
@@ -254,6 +257,140 @@ public class CollaborationSessionServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> sessionService.getActiveSession(SKILL_MAP_ID, buildOwner()));
+    }
+
+    // --- getActiveSessionState ---
+
+    private UnderstandingRating buildRating(Long skillId, Long userId, Integer rating) {
+        UnderstandingRating r = new UnderstandingRating();
+        r.setSessionId(SESSION_ID);
+        r.setSkillId(skillId);
+        r.setUserId(userId);
+        r.setRating(rating);
+        r.setSubmittedAt(LocalDateTime.now());
+        return r;
+    }
+
+    private void mockActiveSessionState(List<LiveQuestion> questions, List<UnderstandingRating> ratings) {
+        Mockito.when(membershipRepository.existsBySkillMapIdAndUserId(SKILL_MAP_ID, OWNER_ID)).thenReturn(true);
+        Mockito.when(sessionRepository.findBySkillMapIdAndIsActiveTrue(SKILL_MAP_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(liveQuestionRepository.findBySessionId(SESSION_ID)).thenReturn(questions);
+        Mockito.when(understandingRatingRepository.findBySessionId(SESSION_ID)).thenReturn(ratings);
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.of(buildSkillMap()));
+        Mockito.when(skillRepository.findBySkillMap(Mockito.any())).thenReturn(List.of());
+    }
+
+    @Test
+    public void getActiveSessionState_noRatings_returnsEmptySkillRatings() {
+        mockActiveSessionState(List.of(), List.of());
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        assertNotNull(result);
+        assertTrue(result.getSkillRatings().isEmpty());
+        assertTrue(result.getQuestions().isEmpty());
+    }
+
+    @Test
+    public void getActiveSessionState_withRatings_computesCorrectAverageAndTotal() {
+        List<UnderstandingRating> ratings = List.of(
+                buildRating(5L, OTHER_ID, 60),
+                buildRating(5L, 300L, 80)
+        );
+        mockActiveSessionState(List.of(), ratings);
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(1, result.getSkillRatings().size());
+        SkillRatingSummaryDTO summary = result.getSkillRatings().get(0);
+        assertEquals(5L, summary.getSkillId());
+        assertEquals(70.0, summary.getAverageRating());
+        assertEquals(2, summary.getTotalRatings());
+    }
+
+    @Test
+    public void getActiveSessionState_myRatingSetForCallingUser() {
+        List<UnderstandingRating> ratings = List.of(
+                buildRating(5L, OWNER_ID, 75),
+                buildRating(5L, OTHER_ID, 25)
+        );
+        mockActiveSessionState(List.of(), ratings);
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        SkillRatingSummaryDTO summary = result.getSkillRatings().get(0);
+        assertEquals(75, summary.getMyRating());
+        assertEquals(50.0, summary.getAverageRating());
+    }
+
+    @Test
+    public void getActiveSessionState_myRatingNullWhenUserHasNotRated() {
+        List<UnderstandingRating> ratings = List.of(
+                buildRating(5L, OTHER_ID, 80)
+        );
+        mockActiveSessionState(List.of(), ratings);
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        SkillRatingSummaryDTO summary = result.getSkillRatings().get(0);
+        assertNull(summary.getMyRating());
+        assertEquals(1, summary.getTotalRatings());
+    }
+
+    @Test
+    public void getActiveSessionState_ratingsGroupedBySkill() {
+        List<UnderstandingRating> ratings = List.of(
+                buildRating(5L, OTHER_ID, 60),
+                buildRating(6L, OTHER_ID, 90)
+        );
+        mockActiveSessionState(List.of(), ratings);
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(2, result.getSkillRatings().size());
+    }
+
+    @Test
+    public void getActiveSessionState_multipleSkills_computesCorrectAverageAndTotalPerSkill() {
+        List<UnderstandingRating> ratings = List.of(
+                buildRating(5L, OTHER_ID, 40),
+                buildRating(5L, 300L, 80),
+                buildRating(6L, OTHER_ID, 90),
+                buildRating(6L, OWNER_ID, 70)
+        );
+        mockActiveSessionState(List.of(), ratings);
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(2, result.getSkillRatings().size());
+
+        SkillRatingSummaryDTO skill5 = result.getSkillRatings().stream()
+                .filter(s -> s.getSkillId().equals(5L)).findFirst().orElseThrow();
+        assertEquals(60.0, skill5.getAverageRating());
+        assertEquals(2, skill5.getTotalRatings());
+        assertNull(skill5.getMyRating());
+
+        SkillRatingSummaryDTO skill6 = result.getSkillRatings().stream()
+                .filter(s -> s.getSkillId().equals(6L)).findFirst().orElseThrow();
+        assertEquals(80.0, skill6.getAverageRating());
+        assertEquals(2, skill6.getTotalRatings());
+        assertEquals(70, skill6.getMyRating());
+    }
+
+    @Test
+    public void getActiveSessionState_questionsIncludedInResponse() {
+        LiveQuestion q1 = new LiveQuestion();
+        q1.setId(1L);
+        q1.setSessionId(SESSION_ID);
+        LiveQuestion q2 = new LiveQuestion();
+        q2.setId(2L);
+        q2.setSessionId(SESSION_ID);
+        mockActiveSessionState(List.of(q1, q2), List.of());
+
+        SessionStateDTO result = sessionService.getActiveSessionState(SKILL_MAP_ID, buildOwner());
+
+        assertEquals(2, result.getQuestions().size());
     }
 
     // --- setPromptedQuiz ---
