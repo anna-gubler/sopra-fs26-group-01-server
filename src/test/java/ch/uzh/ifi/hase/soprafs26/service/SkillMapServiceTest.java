@@ -10,6 +10,7 @@ import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMapMembership;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.DependencyRepository;
+import ch.uzh.ifi.hase.soprafs26.repository.StudentProgressRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizAnswerRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizQuestionRepository;
 import ch.uzh.ifi.hase.soprafs26.repository.QuizRepository;
@@ -68,6 +69,9 @@ class SkillMapServiceTest {
     
     @Mock
     private QuizAnswerRepository quizAnswerRepository;
+
+    @Mock
+    private StudentProgressRepository studentProgressRepository;
 
     // ─── shared fixtures ──────────────────────────────────────────────────────
 
@@ -857,6 +861,7 @@ class SkillMapServiceTest {
         skill.setSkillMap(skillMap);
         given(skillRepository.findBySkillMap(skillMap)).willReturn(List.of(skill));
         given(dependencyRepository.findByFromSkill_IdIn(List.of(5L))).willReturn(List.of());
+        given(studentProgressRepository.findByUserIdAndSkillIdIn(owner.getId(), List.of(5L))).willReturn(List.of());
 
         ch.uzh.ifi.hase.soprafs26.rest.dto.SkillMapGraphDTO graph =
                 skillMapService.getSkillMapGraph(10L, owner);

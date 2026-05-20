@@ -110,6 +110,7 @@ public interface DTOMapper {
 
     // Skill mappings
     @Mapping(source = "skillMap.id", target = "skillMapId")
+    @Mapping(target = "isUnderstood", ignore = true)
     SkillGetDTO convertEntityToSkillGetDTO(Skill skill);
 
     @Mapping(target = "id", ignore = true)
