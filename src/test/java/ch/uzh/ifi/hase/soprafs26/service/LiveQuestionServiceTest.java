@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -286,5 +287,31 @@ class LiveQuestionServiceTest {
                 () -> liveQuestionService.markAddressed(10L, 99L));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void markAddressed_whenAlreadyAddressed_togglesBackToUnaddressed() {
+        dummyQuestion.setIsAddressed(true);
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(collaborationSessionRepository.findById(1L)).willReturn(Optional.of(dummySession));
+        given(skillMapRepository.findById(5L)).willReturn(Optional.of(dummyMap));
+        given(liveQuestionRepository.save(any())).willReturn(dummyQuestion);
+
+        liveQuestionService.markAddressed(10L, 99L);
+
+        assertFalse(dummyQuestion.getIsAddressed());
+    }
+
+    @Test
+    void markAddressed_broadcastsUpdatedQuestionsStateAfterToggle() {
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(collaborationSessionRepository.findById(1L)).willReturn(Optional.of(dummySession));
+        given(skillMapRepository.findById(5L)).willReturn(Optional.of(dummyMap));
+        given(liveQuestionRepository.save(any())).willReturn(dummyQuestion);
+        given(liveQuestionRepository.findBySessionId(1L)).willReturn(List.of(dummyQuestion));
+
+        liveQuestionService.markAddressed(10L, 99L);
+
+        verify(webSocketBroadcastService).broadcastQuestionsState(eq(1L), any());
     }
 }

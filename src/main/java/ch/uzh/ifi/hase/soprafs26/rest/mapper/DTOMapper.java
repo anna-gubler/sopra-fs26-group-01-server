@@ -50,6 +50,9 @@ public interface DTOMapper {
     @Mapping(source = "password", target = "password")
     @Mapping(target = "style", ignore = true)
     @Mapping(target = "seed", ignore = true)
+    @Mapping(target = "hasSeenDashboard", ignore = true)
+    @Mapping(target = "hasSeenMapAsMember", ignore = true)
+    @Mapping(target = "hasSeenMapAsOwner", ignore = true)
     User convertUserPostDTOtoEntity(UserPostDTO userPostDTO);
 
     @Mapping(source = "id", target = "id")
@@ -72,6 +75,9 @@ public interface DTOMapper {
     @Mapping(source = "password", target = "password")
     @Mapping(target = "style", ignore = true)
     @Mapping(target = "seed", ignore = true)
+    @Mapping(target = "hasSeenDashboard", ignore = true)
+    @Mapping(target = "hasSeenMapAsMember", ignore = true)
+    @Mapping(target = "hasSeenMapAsOwner", ignore = true)
     User convertUserPutDTOtoEntity(UserPutDTO userPutDTO);
 
     @Mapping(source = "username", target = "username")
@@ -83,6 +89,9 @@ public interface DTOMapper {
     @Mapping(source = "password", target = "password")
     @Mapping(target = "style", ignore = true)
     @Mapping(target = "seed", ignore = true)
+    @Mapping(target = "hasSeenDashboard", ignore = true)
+    @Mapping(target = "hasSeenMapAsMember", ignore = true)
+    @Mapping(target = "hasSeenMapAsOwner", ignore = true)
     User convertUserPatchDTOtoEntity(UserPatchDTO userPatchDTO);
 
     @Mapping(target = "id", ignore = true)
@@ -94,18 +103,23 @@ public interface DTOMapper {
     @Mapping(target = "password", ignore = true)
     @Mapping(source = "style", target = "style")
     @Mapping(source = "seed", target = "seed")
+    @Mapping(target = "hasSeenDashboard", ignore = true)
+    @Mapping(target = "hasSeenMapAsMember", ignore = true)
+    @Mapping(target = "hasSeenMapAsOwner", ignore = true)
     User convertUserPutAvatarDTOtoEntity(UserPutAvatarDTO userPutAvatarDTO);
 
     // Skill mappings
     @Mapping(source = "skillMap.id", target = "skillMapId")
     SkillGetDTO convertEntityToSkillGetDTO(Skill skill);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "skillMap", ignore = true)
     @Mapping(target = "isLocked", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Skill convertSkillPostDTOtoEntity(SkillPostDTO skillPostDTO);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "skillMap", ignore = true)
     @Mapping(target = "isLocked", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -117,12 +131,22 @@ public interface DTOMapper {
     @Mapping(source = "description", target = "description")
     @Mapping(source = "isPublic", target = "isPublic")
     @Mapping(source = "numberOfLevels", target = "numberOfLevels")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "inviteCode", ignore = true)
+    @Mapping(target = "ownerId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     SkillMap convertSkillMapPostDTOtoEntity(SkillMapPostDTO skillMapPostDTO);
 
     @Mapping(source = "title", target = "title")
     @Mapping(source = "description", target = "description")
     @Mapping(source = "isPublic", target = "isPublic")
     @Mapping(source = "numberOfLevels", target = "numberOfLevels")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "inviteCode", ignore = true)
+    @Mapping(target = "ownerId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     SkillMap convertSkillMapPutDTOtoEntity(SkillMapPutDTO skillMapPutDTO);
 
     @Mapping(source = "id", target = "id")
@@ -152,18 +176,24 @@ public interface DTOMapper {
     @Mapping(source = "id", target = "id")
     QuizGetDTO convertQuizEntityToQuizGetDTO(Quiz quiz);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "skillId", ignore = true)
     Quiz convertQuizPostDTOToQuizEntity(QuizPostDTO quizPostDTO);
 
     // QuizQuestion
     @Mapping(source = "id", target = "id")
     QuizQuestionGetDTO convertQuizQuestionEntityToQuizQuestionGetDTO(QuizQuestion quizQuestion);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "quizId", ignore = true)
     QuizQuestion convertQuizQuestionPostDTOToQuizQuestionEntity(QuizQuestionPostDTO quizQuestionPostDTO);
 
     // QuizAnswer
     @Mapping(source = "id", target = "id")
     QuizAnswerGetDTO convertQuizAnswerEntityToQuizAnswerGetDTO(QuizAnswer quizAnswer);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "quizQuestionId", ignore = true)
     QuizAnswer convertQuizAnswerPostDTOToQuizAnswerEntity(QuizAnswerPostDTO quizAnswerPostDTO);
 
     // QuizAttempt

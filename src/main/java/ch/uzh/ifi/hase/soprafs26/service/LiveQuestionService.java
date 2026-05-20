@@ -110,7 +110,7 @@ public class LiveQuestionService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can mark questions as addressed");
         }
 
-        question.setIsAddressed(true);
+        question.setIsAddressed(!Boolean.TRUE.equals(question.getIsAddressed()));
         question.setUpdatedAt(LocalDateTime.now());
         LiveQuestion saved = liveQuestionRepository.save(question);
         webSocketBroadcastService.broadcastQuestionsState(question.getSessionId(), getQuestionsBySession(question.getSessionId()));
