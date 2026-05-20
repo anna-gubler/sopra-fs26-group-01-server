@@ -89,9 +89,9 @@ public interface DTOMapper {
     @Mapping(source = "password", target = "password")
     @Mapping(target = "style", ignore = true)
     @Mapping(target = "seed", ignore = true)
-    @Mapping(target = "hasSeenDashboard", ignore = true)
-    @Mapping(target = "hasSeenMapAsMember", ignore = true)
-    @Mapping(target = "hasSeenMapAsOwner", ignore = true)
+    @Mapping(source = "hasSeenDashboard", target = "hasSeenDashboard")
+    @Mapping(source = "hasSeenMapAsMember", target = "hasSeenMapAsMember")
+    @Mapping(source = "hasSeenMapAsOwner", target = "hasSeenMapAsOwner")
     User convertUserPatchDTOtoEntity(UserPatchDTO userPatchDTO);
 
     @Mapping(target = "id", ignore = true)
