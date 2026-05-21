@@ -1,119 +1,152 @@
-# SoPra RESTful Service Template FS26
+# README Mappd
 
-## Getting started with Spring Boot
--   Documentation: https://docs.spring.io/spring-boot/docs/current/reference/html/index.html
--   Guides: http://spring.io/guides
-    -   Building a RESTful Web Service: http://spring.io/guides/gs/rest-service/
-    -   Building REST services with Spring: https://spring.io/guides/tutorials/rest/
+Mappd is a visualized learning tool for university courses. Lecturers structure a course into a **skill map**: a visual graph of skills and their dependencies. Students join maps to orient themselves and track personal progress. A live **Collaboration Mode** turns the map into a real-time feedback channel: students submit understanding ratings and anonymous questions, while the lecturer watches a live dashboard overlaid on the skill map.
+
+This repository contains the Spring Boot backend. It exposes a REST API consumed by the Next.js frontend and a WebSocket endpoint for real-time collaboration features.
+
+---
+
+## Technologies Used
+
+- Java 21
+- Spring Boot 3
+- Spring Data JPA / Hibernate
+- PostgreSQL
+- WebSockets (STOMP over SockJS)
+- Gradle
+- DiceBear API (external, for avatar generation)
+
+---
+
+## High-Level Components
+
+### 1. REST Controllers
+**[`src/main/java/.../controller/`](src/main/java/ch/uzh/ifi/hase/soprafs24/controller)**
+
+One controller per domain area (users, skill maps, skills, dependencies, sessions, questions, quizzes, quiz attempts). Each controller maps HTTP requests to service calls and returns DTOs. All protected endpoints require a valid token; the `UserController` handles registration and login without authentication.
+
+### 2. WebSocket Handler
+**[`src/main/java/.../websocket/`](src/main/java/ch/uzh/ifi/hase/soprafs24/websocket)**
+
+Manages STOMP subscriptions and broadcasts for Collaboration Mode. When a student submits an understanding rating, posts a question, or upvotes, the handler aggregates the change and pushes an update to all subscribers on the relevant session topic. This is what makes the lecturer dashboard update live without polling.
+
+### 3. Service Layer
+**[`src/main/java/.../service/`](src/main/java/ch/uzh/ifi/hase/soprafs24/service)**
+
+Contains all business logic: session lifecycle management, skill-locking rules based on quiz pass status and dependency chains, understanding aggregation across participants, quiz attempt scoring, and export/import of skill maps. Controllers and the WebSocket handler both delegate to services.
+
+### 4. JPA Repositories and Domain Entities
+**[`src/main/java/.../repository/`](src/main/java/ch/uzh/ifi/hase/soprafs24/repository)** | **[`src/main/java/.../entity/`](src/main/java/ch/uzh/ifi/hase/soprafs24/entity)**
+
+JPA entities: `User`, `SkillMap`, `SkillMapMembership`, `Skill`, `Dependency`, `StudentProgress`, `CollaborationSession`, `SessionParticipant`, `UnderstandingRating`, `LiveQuestion`, `UpvoteRecord`, `Quiz`, `QuizQuestion`, `QuizAnswer`, `QuizAttempt`. Repositories extend `JpaRepository` and are the only layer that touches the database.
+
+### 5. DTOs and Mappers
+**[`src/main/java/.../dto/`](src/main/java/ch/uzh/ifi/hase/soprafs24/dto)**
+
+Request and response DTOs decouple the API contract from the domain model. Mappers convert between entities and DTOs so that internal fields (e.g. hashed passwords) are never accidentally exposed.
+
+---
+
+## Launch & Deployment
+
+### Prerequisites
+
+- Java 21+
+- Gradle (wrapper included, no separate installation needed)
+
+No external database setup is required. The server uses an H2 in-memory database out of the box.
 
 
-## Setup this Template with your IDE of choice
-Download your IDE of choice (e.g., [IntelliJ](https://www.jetbrains.com/idea/download/), [Visual Studio Code](https://code.visualstudio.com/), or [Eclipse](http://www.eclipse.org/downloads/)). Make sure Java 17 is installed on your system (for Windows, please make sure your `JAVA_HOME` environment variable is set to the correct version of Java).
+### Environment / Configuration
 
-### IntelliJ
-If you consider to use IntelliJ as your IDE of choice, you can make use of your free educational license [here](https://www.jetbrains.com/community/education/#students).
-1. File -> Open... -> SoPra server template
-2. Accept to import the project as a `gradle project`
-3. To build right click the `build.gradle` file and choose `Run Build`
+No configuration is needed to run locally. The server is pre-configured with:
 
-### VS Code
-The following extensions can help you get started more easily:
--   `vmware.vscode-spring-boot`
--   `vscjava.vscode-spring-initializr`
--   `vscjava.vscode-spring-boot-dashboard`
--   `vscjava.vscode-java-pack`
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
 
-**Note:** You'll need to build the project first with Gradle, just click on the `build` command in the _Gradle Tasks_ extension. Then check the _Spring Boot Dashboard_ extension if it already shows `soprafs26` and hit the play button to start the server. If it doesn't show up, restart VS Code and check again.
+An H2 console is available at `http://localhost:8080/h2-console/` during development (username: `sa`, no password).
 
-## Building with Gradle
-You can use the local Gradle Wrapper to build the application.
--   macOS: `./gradlew`
--   Linux: `./gradlew`
--   Windows: `./gradlew.bat`
+For production, override the datasource via environment variables on your deployment platform to point to a persistent database such as PostgreSQL.
 
-More Information about [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) and [Gradle](https://gradle.org/docs/).
-
-### Build
-
-```bash
-./gradlew build
-```
-
-### Run
+### Run Locally
 
 ```bash
 ./gradlew bootRun
 ```
 
-You can verify that the server is running by visiting `localhost:8080` in your browser.
+The server starts on `http://localhost:8080` by default.
 
-### Test
+### Run Tests
 
 ```bash
 ./gradlew test
 ```
 
-### Development Mode
-You can start the backend in development mode, this will automatically trigger a new build and reload the application
-once the content of a file has been changed.
+Test reports are written to `build/reports/tests/test/index.html`.
 
-Start two terminal windows and run:
+### Build for Production
 
-`./gradlew build --continuous`
+```bash
+./gradlew build
+```
 
-and in the other one:
+This produces a runnable JAR at `build/libs/mappd-backend.jar`. Deploy it to your platform of choice (Railway, Render, etc.) and set the database environment variables there.
 
-`./gradlew bootRun`
+### Releases
 
-If you want to avoid running all tests with every change, use the following command instead:
+Tag the commit and push:
 
-`./gradlew build --continuous -xtest`
+```bash
+git tag v1.x.x
+git push origin v1.x.x
+```
 
-## API Endpoint Testing with Postman
-We recommend using [Postman](https://www.getpostman.com) to test your API Endpoints.
+Then deploy the new JAR to your hosting platform.
 
-## Debugging
-If something is not working and/or you don't know what is going on. We recommend using a debugger and step-through the process step-by-step.
+---
 
-To configure a debugger for SpringBoot's Tomcat servlet (i.e. the process you start with `./gradlew bootRun` command), do the following:
+## Roadmap
 
-1. Open Tab: **Run**/Edit Configurations
-2. Add a new Remote Configuration and name it properly
-3. Start the Server in Debug mode: `./gradlew bootRun --debug-jvm`
-4. Press `Shift + F9` or the use **Run**/Debug "Name of your task"
-5. Set breakpoints in the application where you need it
-6. Step through the process one step at a time
+The following features would be good next contributions for new developers:
 
-## Testing
-Have a look here: https://www.baeldung.com/spring-boot-testing
+1. **Interact with user profiles:** Currently, user profiles display a username and 
+   avatar but are not publicly viewable by others. A new contributor could add a 
+   public profile page showing a user's joined maps and progress statistics, and 
+   allow map members to view each other's profiles within a shared skill map.
 
-<br>
-<br>
-<br>
+2. **Quiz Analytics**: After a quiz, the lecturer can see aggregated results across 
+   all students — specifically which questions were most commonly answered 
+   incorrectly. This gives the lecturer actionable insight into which concepts need 
+   further clarification, closing the feedback loop between assessment and teaching.
 
-## Docker
+3. **Nested Maps**: Currently, a skill node holds a description and resources but 
+   cannot expand further. A new contributor could allow a skill node to reference 
+   an entire child skill map, so that clicking into a node reveals its own graph 
+   of sub-skills with their own dependencies and levels. Progress and understanding 
+   data from sub-maps would aggregate upward, meaning a top-level node reflects 
+   the actual state of everything beneath it — enabling hierarchically structured 
+   courses where a degree programme map unfolds into individual course maps, each 
+   with their own skill graphs.
 
-### Introduction
-This year Docker will be used to ease the process of deployment.\
-Docker is a tool that uses containers as isolated environments, ensuring that the application runs consistently and uniformly across different devices.\
-Everything in this repository is already set up to minimize your effort for deployment.\
-All changes to the main branch will automatically be pushed to dockerhub and optimized for production.
+---
 
-### Setup
-1. **One** member of the team should create an account on [dockerhub](https://hub.docker.com/), _incorporating the group number into the account name_, for example, `SoPra_group_XX`.\
-2. This account then creates a repository on dockerhub with the _same name as the group's Github repository name_.\
-3. Finally, the person's account details need to be added as [secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) to the group's repository:
-    - dockerhub_username (the username of the dockerhub account from step 1, for example, `SoPra_group_XX`)
-    - dockerhub_password (a generated PAT([personal access token](https://docs.docker.com/docker-hub/access-tokens/)) of the account with read and write access)
-    - dockerhub_repo_name (the name of the dockerhub repository from step 2)
+## Authors and Acknowledgment
 
-### Pull and run
-Once the image is created and has been successfully pushed to dockerhub, the image can be run on any machine.\
-Ensure that [Docker](https://www.docker.com/) is installed on the machine you wish to run the container.\
-First, pull (download) the image with the following command, replacing your username and repository name accordingly.
+| Name | UZH Email | GitHub |
+|---|---|---|
+| Chiara Wooldridge | chiara.wooldridge@uzh.ch | [@chiawld](https://github.com/chiawld) |
+| Anna Gubler | anna.gubler@uzh.ch | [@anna-gubler](https://github.com/anna-gubler) |
+| Elias Iskander | eliasmithanios.iskander@uzh.ch | [@elsithewizzard](https://github.com/elsithewizzard) |
+| Sebastian Huber | sebastian.huber2@uzh.ch | [@sebdahub](https://github.com/sebdahub) |
+| Hadia Aslam | hadia.aslam@uzh.ch | [@haslam](https://github.com/haslam) |
 
-```docker pull <dockerhub_username>/<dockerhub_repo_name>```
+Built as part of the Software Engineering Lab (SoPra FS26), Department of Informatics, University of Zurich.
 
-Then, run the image in a container with the following command, again replacing _<dockerhub_username>_ and _<dockerhub_repo_name>_ accordingly.
+Thanks to the [DiceBear API](https://www.dicebear.com/) for avatar generation, and to the SoPra teaching team for the project template.
 
-```docker run -p 3000:3000 <dockerhub_username>/<dockerhub_repo_name>```
+---
+
+## License
+
+[MIT License](LICENSE)
