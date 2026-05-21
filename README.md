@@ -52,21 +52,22 @@ Request and response DTOs decouple the API contract from the domain model. Mappe
 ### Prerequisites
 
 - Java 21+
-- PostgreSQL running locally (or a connection string to a remote instance)
-- Gradle (wrapper included)
+- Gradle (wrapper included, no separate installation needed)
+
+No external database setup is required. The server uses an H2 in-memory database out of the box.
+
 
 ### Environment / Configuration
 
-Create or edit `src/main/resources/application.properties` (or use environment variables):
+No configuration is needed to run locally. The server is pre-configured with:
 
-```
-spring.datasource.url=jdbc:postgresql://localhost:5432/mappd
-spring.datasource.username=YOUR_DB_USER
-spring.datasource.password=YOUR_DB_PASSWORD
-spring.jpa.hibernate.ddl-auto=update
-```
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
 
-For production, override these via environment variables on your deployment platform.
+An H2 console is available at `http://localhost:8080/h2-console/` during development (username: `sa`, no password).
+
+For production, override the datasource via environment variables on your deployment platform to point to a persistent database such as PostgreSQL.
 
 ### Run Locally
 
@@ -114,18 +115,19 @@ The following features would be good next contributions for new developers:
    public profile page showing a user's joined maps and progress statistics, and 
    allow map members to view each other's profiles within a shared skill map.
 
-2. **Duplication of maps:** Lecturers who want to reuse a skill map across semesters 
-   or create a variant of an existing map currently have to rebuild it from scratch 
-   (or use export/import). A duplicate feature would let any map owner clone an 
-   entire map — including its skills, dependencies, and quiz questions — into a new 
-   editable copy.
+2. **Quiz Analytics**: After a quiz, the lecturer can see aggregated results across 
+   all students — specifically which questions were most commonly answered 
+   incorrectly. This gives the lecturer actionable insight into which concepts need 
+   further clarification, closing the feedback loop between assessment and teaching.
 
-3. **Nested maps:** Currently, a skill node holds a description and resources but 
+3. **Nested Maps**: Currently, a skill node holds a description and resources but 
    cannot expand further. A new contributor could allow a skill node to reference 
    an entire child skill map, so that clicking into a node reveals its own graph 
-   of sub-skills with their own dependencies and levels. This would enable 
-   hierarchically structured courses — for example, a top-level map of a 
-   degree programme whose nodes each unfold into individual course maps.
+   of sub-skills with their own dependencies and levels. Progress and understanding 
+   data from sub-maps would aggregate upward, meaning a top-level node reflects 
+   the actual state of everything beneath it — enabling hierarchically structured 
+   courses where a degree programme map unfolds into individual course maps, each 
+   with their own skill graphs.
 
 ---
 
