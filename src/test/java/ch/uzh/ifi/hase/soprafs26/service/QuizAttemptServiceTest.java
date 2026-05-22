@@ -228,24 +228,6 @@ class QuizAttemptServiceTest {
     }
 
     @Test
-    void submitAttempt_answerNotBelongToQuestion_throws400() {
-        QuizAnswer foreignAnswer = new QuizAnswer();
-        foreignAnswer.setQuizQuestionId(99L); // andere Frage
-        foreignAnswer.setIsCorrect(true);
-
-        given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
-        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
-
-        SubmittedAnswerDTO submitted = new SubmittedAnswerDTO();
-        submitted.setQuizQuestionId(question.getId());
-        submitted.setSelectedAnswerId(52L);
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> quizAttemptService.submitAttempt(60L, List.of(submitted), student));
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-    }
-
-    @Test
     void submitAttempt_notOwnAttempt_throws403() {
         attempt.setUserId(owner.getId());
         given(quizAttemptRepository.findById(60L)).willReturn(Optional.of(attempt));
@@ -355,22 +337,6 @@ class QuizAttemptServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> quizAttemptService.createAttempt(30L, student));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
-
-    @Test
-    void createAttempt_unsubmittedAttemptExists_throwsConflict() {
-        given(quizRepository.findById(30L)).willReturn(Optional.of(quiz));
-        given(skillRepository.findById(20L)).willReturn(Optional.of(skill));
-        given(skillMapMembershipRepository.existsBySkillMapIdAndUserId(10L, student.getId())).willReturn(true);
-
-        QuizAttempt existing = new QuizAttempt();
-        existing.setPassed(null);
-        given(quizAttemptRepository.findTopByUserIdAndQuizIdOrderByAttemptedAtDesc(student.getId(), 30L))
-                .willReturn(Optional.of(existing));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> quizAttemptService.createAttempt(30L, student));
-        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
     @Test

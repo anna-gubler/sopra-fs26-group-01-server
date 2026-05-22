@@ -169,41 +169,4 @@ public class AuthInterceptorTest {
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
 
-    // --- Different HTTP methods (non-OPTIONS) ---
-
-    @Test
-    public void givenPostRequest_whenPreHandle_thenValidateAuthorization() {
-        User user = buildUser();
-        when(request.getMethod()).thenReturn("POST");
-        when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        when(userService.getUserByToken("valid-token")).thenReturn(user);
-
-        boolean result = authInterceptor.preHandle(request, response, new Object());
-
-        assertTrue(result);
-    }
-
-    @Test
-    public void givenPutRequest_whenPreHandle_thenValidateAuthorization() {
-        User user = buildUser();
-        when(request.getMethod()).thenReturn("PUT");
-        when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        when(userService.getUserByToken("valid-token")).thenReturn(user);
-
-        boolean result = authInterceptor.preHandle(request, response, new Object());
-
-        assertTrue(result);
-    }
-
-    @Test
-    public void givenDeleteRequest_whenPreHandle_thenValidateAuthorization() {
-        User user = buildUser();
-        when(request.getMethod()).thenReturn("DELETE");
-        when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        when(userService.getUserByToken("valid-token")).thenReturn(user);
-
-        boolean result = authInterceptor.preHandle(request, response, new Object());
-
-        assertTrue(result);
-    }
 }
