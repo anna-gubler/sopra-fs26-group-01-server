@@ -19,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +90,24 @@ class LiveQuestionControllerTest {
                 "skillName", "Skill A",
                 "text", "What is polymorphism?"
         );
+
+        mockMvc.perform(post("/sessions/1/questions")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.text").value("What is polymorphism?"));
+    }
+
+    @Test
+    void postQuestion_nullSkillId_returnsCreated() throws Exception {
+        given(liveQuestionService.postQuestion(eq(1L), eq(null), any(), eq("What is polymorphism?")))
+                .willReturn(dummyQuestion);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("skillId", null);
+        body.put("skillName", "Skill A");
+        body.put("text", "What is polymorphism?");
 
         mockMvc.perform(post("/sessions/1/questions")
                         .header("Authorization", "Bearer valid-token")

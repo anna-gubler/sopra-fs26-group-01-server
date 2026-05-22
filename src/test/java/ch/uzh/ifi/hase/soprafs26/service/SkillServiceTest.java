@@ -1,5 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.service;
 
+import ch.uzh.ifi.hase.soprafs26.entity.Dependency;
 import ch.uzh.ifi.hase.soprafs26.entity.Skill;
 import ch.uzh.ifi.hase.soprafs26.entity.SkillMap;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -136,6 +137,20 @@ class SkillServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> skillService.createSkill(10L, input, owner));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void createSkill_nullLevel_throws400() {
+        given(skillMapRepository.findById(10L)).willReturn(Optional.of(skillMap));
+
+        Skill input = new Skill();
+        input.setName("Recursion");
+        input.setLevel(null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillService.createSkill(10L, input, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(skillRepository, never()).save(any());
     }
 
     @Test
@@ -340,6 +355,139 @@ class SkillServiceTest {
         Skill result = skillService.updateSkill(5L, updates, owner);
 
         assertEquals("Existing note", result.getNotes());
+    }
+
+    @Test
+    void updateSkill_description_updatesCorrectly() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setDescription("This skill covers recursion fundamentals.");
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals("This skill covers recursion fundamentals.", result.getDescription());
+        verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void updateSkill_resources_updatesCorrectly() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setResources("https://example.com/recursion");
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals("https://example.com/recursion", result.getResources());
+        verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void updateSkill_positionX_updatesCorrectly() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setPositionX(3.5f);
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals(3.5f, result.getPositionX());
+        verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void updateSkill_difficulty_updatesCorrectly() {
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setDifficulty("hard");
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals("hard", result.getDifficulty());
+        verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void updateSkill_levelViolatesPrerequisite_throws400() {
+        Skill prerequisite = new Skill();
+        prerequisite.setId(6L);
+        prerequisite.setName("Basics");
+        prerequisite.setLevel(3);
+
+        Dependency dep = new Dependency();
+        dep.setFromSkill(prerequisite);
+        dep.setToSkill(skill);
+
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(dependencyRepository.findByToSkill(skill)).willReturn(List.of(dep));
+
+        Skill updates = new Skill();
+        updates.setLevel(3); // prerequisite is also at 3 → violation
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillService.updateSkill(5L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(skillRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSkill_levelViolatesDependent_throws400() {
+        Skill dependent = new Skill();
+        dependent.setId(7L);
+        dependent.setName("Advanced");
+        dependent.setLevel(1);
+
+        Dependency dep = new Dependency();
+        dep.setFromSkill(skill);
+        dep.setToSkill(dependent);
+
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(dependencyRepository.findByToSkill(skill)).willReturn(List.of());
+        given(dependencyRepository.findByFromSkill(skill)).willReturn(List.of(dep));
+
+        Skill updates = new Skill();
+        updates.setLevel(1); // dependent is also at 1 → violation
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> skillService.updateSkill(5L, updates, owner));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(skillRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSkill_levelChangeValidWithDependencies_succeeds() {
+        Skill prerequisite = new Skill();
+        prerequisite.setLevel(1);
+
+        Skill dependent = new Skill();
+        dependent.setLevel(3);
+
+        Dependency prereqDep = new Dependency();
+        prereqDep.setFromSkill(prerequisite);
+        prereqDep.setToSkill(skill);
+
+        Dependency dependentDep = new Dependency();
+        dependentDep.setFromSkill(skill);
+        dependentDep.setToSkill(dependent);
+
+        given(skillRepository.findById(5L)).willReturn(Optional.of(skill));
+        given(dependencyRepository.findByToSkill(skill)).willReturn(List.of(prereqDep));
+        given(dependencyRepository.findByFromSkill(skill)).willReturn(List.of(dependentDep));
+        given(skillRepository.save(any(Skill.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Skill updates = new Skill();
+        updates.setLevel(2); // prerequisite at 1 < 2 < 3 dependent → valid
+
+        Skill result = skillService.updateSkill(5L, updates, owner);
+
+        assertEquals(2, result.getLevel());
+        verify(skillRepository).save(skill);
     }
 
     // getSkillByIdAndMap

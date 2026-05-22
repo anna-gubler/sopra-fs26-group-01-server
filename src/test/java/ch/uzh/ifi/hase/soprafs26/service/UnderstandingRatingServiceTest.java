@@ -208,4 +208,38 @@ public class UnderstandingRatingServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> ratingService.getRatingsBySession(SESSION_ID, buildOwner()));
     }
+
+    @Test
+    public void submitRating_ratingBelowZero_throwsBadRequest() {
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.submitRating(SESSION_ID, SKILL_ID, buildOwner(), -1));
+    }
+
+    @Test
+    public void getRatingsBySkill_skillNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.getRatingsBySkill(SESSION_ID, SKILL_ID, buildOwner()));
+    }
+
+    @Test
+    public void getRatingsBySkill_skillMapNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(new Skill()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.getRatingsBySkill(SESSION_ID, SKILL_ID, buildOwner()));
+    }
+
+    @Test
+    public void getRatingsBySession_skillMapNotFound_throwsNotFound() {
+        Mockito.when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> ratingService.getRatingsBySession(SESSION_ID, buildOwner()));
+    }
 }

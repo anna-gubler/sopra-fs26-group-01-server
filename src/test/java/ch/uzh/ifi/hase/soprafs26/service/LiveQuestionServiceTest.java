@@ -116,6 +116,16 @@ class LiveQuestionServiceTest {
         verify(liveQuestionRepository).save(any());
     }
 
+    @Test
+    void postQuestion_broadcastsQuestionsStateAfterSave() {
+        given(liveQuestionRepository.save(any())).willReturn(dummyQuestion);
+        given(liveQuestionRepository.findBySessionId(1L)).willReturn(List.of(dummyQuestion));
+
+        liveQuestionService.postQuestion(1L, 2L, "Skill A", "What is polymorphism?");
+
+        verify(webSocketBroadcastService).broadcastQuestionsState(eq(1L), any());
+    }
+
     // deleteQuestion
 
     @Test
@@ -182,6 +192,19 @@ class LiveQuestionServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
+    @Test
+    void upvoteQuestion_broadcastsQuestionsStateAfterUpvote() {
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(upvoteRecordRepository.existsByQuestionIdAndUserId(10L, 1L)).willReturn(false);
+        given(upvoteRecordRepository.save(any())).willReturn(new UpvoteRecord());
+        given(liveQuestionRepository.save(any())).willReturn(dummyQuestion);
+        given(liveQuestionRepository.findBySessionId(1L)).willReturn(List.of(dummyQuestion));
+
+        liveQuestionService.upvoteQuestion(10L, 1L);
+
+        verify(webSocketBroadcastService).broadcastQuestionsState(eq(1L), any());
+    }
+
     // removeUpvote
 
     @Test
@@ -228,6 +251,19 @@ class LiveQuestionServiceTest {
                 () -> liveQuestionService.removeUpvote(10L, 1L));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void removeUpvote_broadcastsQuestionsStateAfterRemoval() {
+        dummyQuestion.setUpvoteCount(1);
+        UpvoteRecord record = new UpvoteRecord();
+        given(liveQuestionRepository.findById(10L)).willReturn(Optional.of(dummyQuestion));
+        given(upvoteRecordRepository.findByQuestionIdAndUserId(10L, 1L)).willReturn(Optional.of(record));
+        given(liveQuestionRepository.findBySessionId(1L)).willReturn(List.of(dummyQuestion));
+
+        liveQuestionService.removeUpvote(10L, 1L);
+
+        verify(webSocketBroadcastService).broadcastQuestionsState(eq(1L), any());
     }
 
     // markAddressed

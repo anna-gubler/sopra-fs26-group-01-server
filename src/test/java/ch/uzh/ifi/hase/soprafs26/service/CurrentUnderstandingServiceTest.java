@@ -128,6 +128,17 @@ public class CurrentUnderstandingServiceTest {
                 () -> currentUnderstandingService.requestFeedback(SESSION_ID, USER_ID));
     }
 
+    @Test
+    public void requestFeedback_skillMapNotFound_throwsNotFound() {
+        Mockito.when(collaborationSessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(buildActiveSession()));
+        Mockito.when(skillMapRepository.findById(SKILL_MAP_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+                () -> currentUnderstandingService.requestFeedback(SESSION_ID, OWNER_ID));
+    }
+
     // --- submitRating ---
 
     @Test

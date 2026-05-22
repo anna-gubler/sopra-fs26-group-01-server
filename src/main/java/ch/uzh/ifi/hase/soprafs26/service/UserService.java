@@ -133,6 +133,17 @@ public class UserService {
 		if (userInput.getPassword() != null) {
 			requestingUser.setPassword(hashPassword(userInput.getPassword()));
 		}
+
+		if (userInput.isHasSeenDashboard()) {
+			requestingUser.setHasSeenDashboard(true);
+		}
+		if (userInput.isHasSeenMapAsMember()) {
+			requestingUser.setHasSeenMapAsMember(true);
+		}
+		if (userInput.isHasSeenMapAsOwner()) {
+			requestingUser.setHasSeenMapAsOwner(true);
+		}
+
 		return userRepository.saveAndFlush(requestingUser);
 	}
 

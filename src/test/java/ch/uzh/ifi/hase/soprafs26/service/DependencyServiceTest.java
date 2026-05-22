@@ -238,12 +238,30 @@ class DependencyServiceTest {
     }
 
     @Test
-    void createDependency_skillNotFound_throws404() {
+    void createDependency_fromSkillNotFound_throws404() {
         when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
         when(skillRepository.findById(100L)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class,
             () -> dependencyService.createDependency(10L, 100L, 200L, owner));
+    }
+
+    @Test
+    void createDependency_toSkillNotFound_throws404() {
+        when(skillMapRepository.findById(10L)).thenReturn(Optional.of(skillMap));
+        when(skillRepository.findById(100L)).thenReturn(Optional.of(fromSkill));
+        when(skillRepository.findById(200L)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.createDependency(10L, 100L, 200L, owner));
+    }
+
+    @Test
+    void createDependency_skillMapNotFound_throws404() {
+        when(skillMapRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class,
+            () -> dependencyService.createDependency(99L, 100L, 200L, owner));
     }
 
     // deleteDependency
